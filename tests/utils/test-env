@@ -1,0 +1,134 @@
+#!/bin/bash
+# Test environment wrapper for setup_local_docker.py
+# Usage: ./test-env <command> [options]
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Get script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
+# Helper functions
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_info() {
+    echo -e "${YELLOW}→${NC} $1"
+}
+
+# Command handlers
+case "$1" in
+    setup)
+        print_info "Setting up test infrastructure..."
+        python "$SCRIPT_DIR/setup_local_docker.py"
+        ;;
+    
+    start)
+        print_info "Starting test services..."
+        python "$SCRIPT_DIR/setup_local_docker.py"
+        ;;
+    
+    stop)
+        print_info "Stopping test services..."
+        python "$SCRIPT_DIR/setup_local_docker.py" --cleanup
+        ;;
+    
+    status)
+        print_info "Checking service status..."
+        python "$SCRIPT_DIR/setup_local_docker.py" --check-ports
+        ;;
+    
+    logs)
+        shift
+        SERVICE="${1:-all}"
+        if [ -f "$PROJECT_ROOT/tests/.docker-ports.lock" ]; then
+            source <(grep "^[A-Z_]*=" "$PROJECT_ROOT/tests/.docker-ports.lock")
+            if [ "$SERVICE" = "all" ]; then
+                docker logs "${PROJECT_NAME}_test_postgres" 2>&1 | tail -20
+                docker logs "${PROJECT_NAME}_test_redis" 2>&1 | tail -20
+                docker logs "${PROJECT_NAME}_test_ollama" 2>&1 | tail -20
+            else
+                docker logs "${PROJECT_NAME}_test_${SERVICE}" 2>&1 | tail -50
+            fi
+        else
+            print_error "No port configuration found. Run 'setup' first."
+            exit 1
+        fi
+        ;;
+    
+    test)
+        shift
+        TIER="${1:-all}"
+        print_info "Running tests (tier: $TIER)..."
+        
+        # Load environment
+        if [ -f "$PROJECT_ROOT/tests/.env.test" ]; then
+            source "$PROJECT_ROOT/tests/.env.test"
+        fi
+        
+        case "$TIER" in
+            tier1|unit)
+                pytest "$PROJECT_ROOT/tests/unit/" -v -m "not (integration or e2e or requires_docker)"
+                ;;
+            tier2|integration)
+                pytest "$PROJECT_ROOT/tests/integration/" -v -m "not e2e"
+                ;;
+            tier3|e2e)
+                pytest "$PROJECT_ROOT/tests/e2e/" -v
+                ;;
+            all)
+                pytest "$PROJECT_ROOT/tests/" -v
+                ;;
+            *)
+                print_error "Unknown tier: $TIER. Use: tier1/unit, tier2/integration, tier3/e2e, or all"
+                exit 1
+                ;;
+        esac
+        ;;
+    
+    reset)
+        print_info "Resetting test infrastructure..."
+        python "$SCRIPT_DIR/setup_local_docker.py" --cleanup
+        sleep 2
+        python "$SCRIPT_DIR/setup_local_docker.py"
+        ;;
+    
+    help|*)
+        echo "Test Environment Manager"
+        echo ""
+        echo "Usage: ./test-env <command> [options]"
+        echo ""
+        echo "Commands:"
+        echo "  setup    - Set up Docker test infrastructure"
+        echo "  start    - Start test services"
+        echo "  stop     - Stop test services"
+        echo "  status   - Check service status and ports"
+        echo "  logs     - Show service logs (usage: logs [service])"
+        echo "  test     - Run tests (usage: test [tier])"
+        echo "  reset    - Reset test infrastructure"
+        echo "  help     - Show this help message"
+        echo ""
+        echo "Test Tiers:"
+        echo "  tier1/unit         - Unit tests (no Docker required)"
+        echo "  tier2/integration  - Integration tests (requires Docker)"
+        echo "  tier3/e2e         - End-to-end tests (full stack)"
+        echo "  all               - All tests"
+        echo ""
+        echo "Examples:"
+        echo "  ./test-env setup           # Initial setup"
+        echo "  ./test-env test tier1      # Run unit tests"
+        echo "  ./test-env logs postgres   # Show PostgreSQL logs"
+        echo "  ./test-env stop            # Stop all services"
+        ;;
+esac
