@@ -6,6 +6,18 @@ I need to fix UAT issue REFMGT-XXX: [Issue description]
 Please follow the standardized UAT process to analyze, implement, test, and deploy the fix.
 ```
 
+## Phase 0: Check and Update Tracking Status
+
+### 0.1 Check Current Status
+**File**: `C:\Users\fujif\OneDrive\Documents\GitHub\hmi-chatbot\tests\uat\HMI_TICKET_TODO_TRACKING.md`
+
+**Prompt**: `Check the current status of REFMGT-XXX in the HMI ticket tracking file`
+
+**Actions**:
+1. Read the tracking file to see current ticket status
+2. Verify if ticket is already in progress or completed
+3. Check dependencies and related tickets
+
 ## Phase 1: Analysis & Understanding
 
 ### 1.1 Initial Issue Assessment
@@ -170,6 +182,25 @@ Create `FINAL_RESOLUTION.md`:
 - Status: ✅ Resolved
 ```
 
+## Phase 7: Update Tracking Status
+
+### 7.1 Update HMI Ticket Tracking
+**File**: `C:\Users\fujif\OneDrive\Documents\GitHub\hmi-chatbot\tests\uat\HMI_TICKET_TODO_TRACKING.md`
+
+**Update Template**:
+```markdown
+- [x] **REFMGT-XXX** - [Priority]: [Issue description] ✅ RESOLVED
+  - **Status:** ~~Backlog~~ **COMPLETED** [Date] | **Priority:** [Priority level]
+  - **Resolution:** Fixed in branch `refmgt-xxx-fix`, tested on VM 18.136.214.139
+  - **Fix Location:** `[file]` lines [X-Y], [brief description]
+  - **Documentation:** `tests/uat/REFMGT-XXX/FINAL_RESOLUTION.md`
+```
+
+### 7.2 Update Phase Tracking
+- Mark the ticket as complete in the appropriate phase section
+- Update progress percentage for the phase
+- Note any dependencies that are now unblocked
+
 ## Common Pitfalls to Avoid
 
 ### ❌ DON'T:
@@ -188,6 +219,7 @@ Create `FINAL_RESOLUTION.md`:
 
 ## Validation Checklist
 
+- [ ] Ticket status checked in HMI_TICKET_TODO_TRACKING.md
 - [ ] Issue reproduced and understood
 - [ ] Fix implemented in local repository
 - [ ] Changes committed to feature branch
@@ -196,6 +228,7 @@ Create `FINAL_RESOLUTION.md`:
 - [ ] Docker services restarted
 - [ ] Fix tested on VM with multiple scenarios
 - [ ] Documentation created
+- [ ] HMI_TICKET_TODO_TRACKING.md updated with resolution
 - [ ] All TodoWrite tasks marked as completed
 
 ## Emergency Rollback
