@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="2" failures="0" skipped="0" tests="2" time="39.183" timestamp="2025-08-04T21:55:33.745789+08:00" hostname="FFOO"><testcase classname="" name="tests.unit.test_classification_nodes_sdk_compliance" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\fujif\OneDrive\Documents\GitHub\horme-pov\src\new_project\tests\unit\test_classification_nodes_sdk_compliance.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py:498: in importtestmodule
+    mod = import_path(
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1204: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1176: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1147: in _find_and_load_unlocked
+    ???
+&lt;frozen importlib._bootstrap&gt;:690: in _load_unlocked
+    ???
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\assertion\rewrite.py:186: in exec_module
+    exec(co, module.__dict__)
+tests\unit\test_classification_nodes_sdk_compliance.py:35: in &lt;module&gt;
+    from src.new_project.nodes.classification_nodes import (
+nodes\__init__.py:25: in &lt;module&gt;
+    from .safety_compliance_nodes import (
+nodes\safety_compliance_nodes.py:16: in &lt;module&gt;
+    from kailash.nodes.base import BaseNode
+E   ImportError: cannot import name 'BaseNode' from 'kailash.nodes.base' (C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\kailash\nodes\base.py)</error></testcase><testcase classname="" name="tests.unit.test_sdk_compliance_foundation" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\fujif\OneDrive\Documents\GitHub\horme-pov\src\new_project\tests\unit\test_sdk_compliance_foundation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py:498: in importtestmodule
+    mod = import_path(
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1204: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1176: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1147: in _find_and_load_unlocked
+    ???
+&lt;frozen importlib._bootstrap&gt;:690: in _load_unlocked
+    ???
+C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\assertion\rewrite.py:186: in exec_module
+    exec(co, module.__dict__)
+tests\unit\test_sdk_compliance_foundation.py:45: in &lt;module&gt;
+    from src.new_project.nodes.sdk_compliance import SecureGovernedNode, ParameterValidator, demonstrate_workflow_execution_pattern, demonstrate_parameter_passing_methods
+nodes\__init__.py:25: in &lt;module&gt;
+    from .safety_compliance_nodes import (
+nodes\safety_compliance_nodes.py:16: in &lt;module&gt;
+    from kailash.nodes.base import BaseNode
+E   ImportError: cannot import name 'BaseNode' from 'kailash.nodes.base' (C:\Users\fujif\AppData\Local\Programs\Python\Python311\Lib\site-packages\kailash\nodes\base.py)</error></testcase></testsuite></testsuites>

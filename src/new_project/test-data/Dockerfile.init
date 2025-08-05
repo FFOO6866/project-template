@@ -1,0 +1,24 @@
+# Test Data Initialization Container
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements-test.txt .
+RUN pip install --no-cache-dir -r requirements-test.txt
+
+# Copy test data and initialization scripts
+COPY test-data/ /app/test-data/
+COPY . /app/
+
+# Set executable permissions
+RUN chmod +x /app/test-data/init_test_data.py
+
+# Default command
+CMD ["python", "/app/test-data/init_test_data.py"]

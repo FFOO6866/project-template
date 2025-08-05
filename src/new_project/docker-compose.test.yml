@@ -1,0 +1,337 @@
+# Docker Compose for Test Infrastructure Services
+# Provides all external service dependencies for comprehensive testing
+
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # POSTGRESQL DATABASE (PRIMARY)
+  # ==============================================================================
+  postgresql:
+    image: postgres:15-alpine
+    container_name: horme_test_postgresql
+    environment:
+      POSTGRES_DB: test_horme_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_test_data:/var/lib/postgresql/data
+      - ./test-data/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_horme_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - test_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # NEO4J GRAPH DATABASE
+  # ==============================================================================
+  neo4j:
+    image: neo4j:5.13-community
+    container_name: horme_test_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/testpassword
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 1g
+      NEO4J_dbms_memory_pagecache_size: 512m
+      NEO4J_dbms_connector_bolt_listen__address: 0.0.0.0:7687
+      NEO4J_dbms_connector_http_listen__address: 0.0.0.0:7474
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_security_auth__minimum__password__length: 4
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_test_data:/data
+      - neo4j_test_logs:/logs
+      - neo4j_test_import:/var/lib/neo4j/import
+      - ./test-data/cypher:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p testpassword 'RETURN 1 as health' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - test_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # CHROMADB VECTOR DATABASE
+  # ==============================================================================
+  chromadb:
+    image: ghcr.io/chroma-core/chroma:0.4.15
+    container_name: horme_test_chromadb
+    environment:
+      CHROMA_HOST: 0.0.0.0
+      CHROMA_PORT: 8000
+      CHROMA_LOG_LEVEL: INFO
+      ALLOW_RESET: true
+      IS_PERSISTENT: true
+      PERSIST_DIRECTORY: /chroma/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_test_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - test_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # REDIS CACHE (OPTIONAL)
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: horme_test_redis
+    environment:
+      REDIS_PASSWORD: testredispass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_test_data:/data
+    command: redis-server --requirepass testredispass --save 60 1000 --loglevel notice
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a testredispass ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - test_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # ELASTICSEARCH (CORE SERVICE FOR E2E TESTING)
+  # ==============================================================================
+  elasticsearch:
+    image: elasticsearch:8.10.0
+    container_name: horme_test_elasticsearch
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: false
+      xpack.security.enrollment.enabled: false
+      bootstrap.memory_lock: true
+      cluster.name: horme-test-cluster
+      node.name: horme-test-node
+      network.host: 0.0.0.0
+      http.port: 9200
+      transport.port: 9300
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_test_data:/usr/share/elasticsearch/data
+      - ./test-data/elasticsearch:/usr/share/elasticsearch/config/test_data:ro
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=30s || exit 1"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+    networks:
+      - test_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # MINIO OBJECT STORAGE (OPTIONAL - FOR FILE TESTING)
+  # ==============================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: horme_test_minio
+    environment:
+      MINIO_ROOT_USER: testminio
+      MINIO_ROOT_PASSWORD: testminio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_test_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - test_network
+    profiles:
+      - storage  # Only start with --profile storage
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # MONITORING AND HEALTH DASHBOARD
+  # ==============================================================================
+  adminer:
+    image: adminer:4.8.1
+    container_name: horme_test_adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: postgresql
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - test_network
+    profiles:
+      - admin  # Only start with --profile admin
+
+  # ==============================================================================
+  # TEST SERVICE HEALTH CHECKER
+  # ==============================================================================
+  healthchecker:
+    image: curlimages/curl:8.2.1
+    container_name: horme_test_healthchecker  
+    command: >
+      sh -c "
+        echo 'Waiting for services to be healthy...' &&
+        until curl -f http://postgresql:5432 2>/dev/null; do sleep 2; done &&
+        until curl -f http://neo4j:7474 2>/dev/null; do sleep 2; done &&
+        until curl -f http://chromadb:8000/api/v1/heartbeat 2>/dev/null; do sleep 2; done &&
+        until curl -f http://redis:6379 2>/dev/null; do sleep 2; done &&
+        echo 'All services are healthy!' &&
+        sleep infinity
+      "
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - test_network
+    profiles:
+      - health  # Only start with --profile health
+
+# ==============================================================================
+# VOLUMES
+# ==============================================================================
+volumes:
+  postgresql_test_data:
+    driver: local
+    name: horme_test_postgresql_data
+  neo4j_test_data:
+    driver: local  
+    name: horme_test_neo4j_data
+  neo4j_test_logs:
+    driver: local
+    name: horme_test_neo4j_logs
+  neo4j_test_import:
+    driver: local
+    name: horme_test_neo4j_import
+  chromadb_test_data:
+    driver: local
+    name: horme_test_chromadb_data
+  redis_test_data:
+    driver: local
+    name: horme_test_redis_data
+  elasticsearch_test_data:
+    driver: local
+    name: horme_test_elasticsearch_data
+  minio_test_data:
+    driver: local
+    name: horme_test_minio_data
+
+# ==============================================================================
+# NETWORKS
+# ==============================================================================
+networks:
+  test_network:
+    driver: bridge
+    name: horme_test_network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+          ip_range: 172.20.240.0/20
+    driver_opts:
+      com.docker.network.bridge.name: horme-test-br
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+
+# ==============================================================================
+# USAGE INSTRUCTIONS
+# ==============================================================================
+# Basic usage:
+#   docker-compose -f docker-compose.test.yml up -d
+#   docker-compose -f docker-compose.test.yml down
+#
+# With specific profiles:
+#   docker-compose -f docker-compose.test.yml --profile admin up -d  # Include Adminer
+#   docker-compose -f docker-compose.test.yml --profile advanced up -d  # Include Elasticsearch
+#   docker-compose -f docker-compose.test.yml --profile storage up -d  # Include MinIO
+#   docker-compose -f docker-compose.test.yml --profile health up -d  # Include health checker
+#
+# View logs:
+#   docker-compose -f docker-compose.test.yml logs -f [service_name]
+#
+# Health check:
+#   docker-compose -f docker-compose.test.yml ps
+#
+# Reset all data:
+#   docker-compose -f docker-compose.test.yml down -v
+#
+# Environment variables can be set in .env file:
+#   POSTGRES_PASSWORD=your_password
+#   NEO4J_PASSWORD=your_neo4j_password
+#   REDIS_PASSWORD=your_redis_password

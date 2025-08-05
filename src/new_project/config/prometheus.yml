@@ -1,0 +1,62 @@
+# Prometheus configuration for Nexus platform monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Nexus platform metrics
+  - job_name: 'nexus-production'
+    static_configs:
+      - targets: ['nexus-production:8000']
+    metrics_path: '/api/v2/metrics/production'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    scheme: http
+    basic_auth:
+      username: 'monitor'
+      password: 'monitor_password'
+
+  # PostgreSQL metrics (if pg_exporter is configured)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis metrics (if redis_exporter is configured)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Nginx metrics (if nginx-prometheus-exporter is configured)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 30s
+
+  # System metrics (if node_exporter is configured)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Container metrics (cAdvisor)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Alert rules (customize based on your requirements)
+# rule_files:
+#   - "nexus_alerts.yml"

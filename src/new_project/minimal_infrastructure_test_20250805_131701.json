@@ -1,0 +1,56 @@
+{
+  "success": true,
+  "passed_tests": 5,
+  "total_tests": 6,
+  "success_rate": 83.33333333333334,
+  "execution_time": 1.02925705909729,
+  "database_path": "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\immediate_test.db",
+  "results": [
+    {
+      "test_name": "SQLite Setup",
+      "success": true,
+      "message": "Database created with 3 test products",
+      "details": {},
+      "timestamp": "2025-08-05T05:17:00.416212"
+    },
+    {
+      "test_name": "SQLDatabaseNode Read",
+      "success": true,
+      "message": "Successfully read 1 records",
+      "details": {
+        "run_id": "b3119a6c-b27e-4e9d-b8e7-e9aba769e030",
+        "sample_data": "{'data': [{'id': 1, 'name': 'Widget A', 'description': 'Basic widget', 'price': 10.99}, {'id': 2, 'name': 'Widget B', 'description': 'Advanced widget', 'price': 24.99}, {'id': 3, 'name': 'Tool X', 'de"
+      },
+      "timestamp": "2025-08-05T05:17:00.646486"
+    },
+    {
+      "test_name": "PythonCodeNode CRUD",
+      "success": true,
+      "message": "CRUD operations successful: {'error': \"Execution failed: Code safety violations found:\\nLine 2: Import of module 'sqlite3' is not allowed\\n\\nSuggestions:\\n- Module 'sqlite3' is not allowed. Available modules: array, collections, csv, datetime, functools, glob, hashlib, itertools, json, math, matplotlib, mimetypes, numpy, os, pandas, pathlib, plotly, random, re, scipy, seaborn, sklearn, statistics, string, time, uuid, xml\\n- For database operations, use SQLDatabaseNode instead\", 'error_type': 'NodeExecutionError', 'failed': True}",
+      "details": {},
+      "timestamp": "2025-08-05T05:17:00.668510"
+    },
+    {
+      "test_name": "In-Memory Cache",
+      "success": true,
+      "message": "Cache operations successful: {'result': {'cache_size': 2, 'user_data': {'name': 'Test User', 'role': 'admin'}, 'session_data': {'user_id': 1, 'expires': '2024-12-31'}, 'cache_hit': True, 'cache_miss': False}}",
+      "details": {},
+      "timestamp": "2025-08-05T05:17:01.369190"
+    },
+    {
+      "test_name": "Service Health Check",
+      "success": false,
+      "message": "Health check completed: unknown",
+      "details": {},
+      "timestamp": "2025-08-05T05:17:01.399308"
+    },
+    {
+      "test_name": "Connection String Validation",
+      "success": true,
+      "message": "SQLite connection string validated successfully",
+      "details": {},
+      "timestamp": "2025-08-05T05:17:01.435996"
+    }
+  ],
+  "infrastructure_ready": true
+}

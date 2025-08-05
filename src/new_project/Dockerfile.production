@@ -1,0 +1,55 @@
+# Production Dockerfile for Nexus Multi-Channel Platform
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV NEXUS_ENV=production
+
+# Create application user
+RUN groupadd -r nexus && useradd -r -g nexus nexus
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements-nexus.txt requirements-production.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-production.txt && \
+    pip install --no-cache-dir -r requirements-nexus.txt
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/cache /app/tmp && \
+    chown -R nexus:nexus /app
+
+# Copy production configuration
+COPY config/production/ ./config/
+
+# Install Kailash SDK and dependencies
+RUN pip install --no-cache-dir kailash[nexus,dataflow]
+
+# Expose ports
+EXPOSE 8000 8001 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v2/health/comprehensive || exit 1
+
+# Switch to non-root user
+USER nexus
+
+# Production startup script
+CMD ["python", "nexus_production_platform.py"]

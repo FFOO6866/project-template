@@ -1,0 +1,40 @@
+{
+  "port": 3001,
+  "host": "0.0.0.0",
+  "enable_auth": true,
+  "auth_type": "jwt",
+  "jwt_secret": "production-mcp-server-secret-key-change-in-production",
+  "jwt_expiration_hours": 24,
+  
+  "max_concurrent_requests": 500,
+  "request_timeout_seconds": 60,
+  "rate_limit_per_minute": 1000,
+  
+  "connection_pool_size": 20,
+  "connection_pool_max_overflow": 40,
+  "connection_recycle_seconds": 1800,
+  
+  "circuit_breaker_failure_threshold": 10,
+  "circuit_breaker_recovery_timeout": 60,
+  
+  "enable_caching": true,
+  "cache_ttl_seconds": 1800,
+  "cache_max_size_mb": 256,
+  
+  "enable_metrics": true,
+  "metrics_collection_interval": 30,
+  "enable_performance_tracking": true,
+  "enable_agent_analytics": true,
+  
+  "enable_http_transport": true,
+  "enable_websocket_transport": true,
+  "enable_stdio_transport": true,
+  
+  "max_agents_per_session": 10,
+  "agent_session_timeout_minutes": 30,
+  "enable_agent_collaboration": true,
+  
+  "enable_dynamic_tool_discovery": true,
+  "tool_discovery_cache_ttl": 300,
+  "auto_register_dataflow_nodes": true
+}

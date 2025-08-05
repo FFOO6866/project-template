@@ -1,0 +1,36 @@
+{
+  "overall_success_rate": 0.0,
+  "total_tests": 187,
+  "total_passed": 0,
+  "tier_metrics": {
+    "tier_1": {
+      "total": 104,
+      "passed": 0,
+      "failed": 104,
+      "success_rate": 0.0,
+      "total_duration": 7.9923951625823975,
+      "avg_duration": 0.07684995348636921
+    },
+    "tier_2": {
+      "total": 45,
+      "passed": 0,
+      "failed": 45,
+      "success_rate": 0.0,
+      "total_duration": 1.2265000343322754,
+      "avg_duration": 0.02725555631849501
+    },
+    "tier_3": {
+      "total": 38,
+      "passed": 0,
+      "failed": 38,
+      "success_rate": 0.0,
+      "total_duration": 45.379135847091675,
+      "avg_duration": 1.1941877854497809
+    }
+  },
+  "performance_compliance": {
+    "tier_1_under_1s": true,
+    "tier_2_under_5s": true,
+    "tier_3_under_10s": true
+  }
+}

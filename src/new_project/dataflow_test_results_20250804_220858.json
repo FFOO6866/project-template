@@ -1,0 +1,403 @@
+{
+  "test_suite": "DataFlow Implementation Test Suite",
+  "total_tests": 6,
+  "passed_tests": 4,
+  "failed_tests": 2,
+  "success_rate": 66.66666666666666,
+  "execution_time": 24.76735806465149,
+  "overall_status": "FAIL",
+  "detailed_results": [
+    {
+      "test_name": "Core Models Import",
+      "success": true,
+      "message": "Successfully imported 14 core models",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:34.160788",
+      "execution_time": 0.03570866584777832
+    },
+    {
+      "test_name": "Core Model Validation",
+      "success": true,
+      "message": "All core models passed integrity validation",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:34.160788",
+      "execution_time": 0.03570866584777832
+    },
+    {
+      "test_name": "Classification Models Import",
+      "success": true,
+      "message": "Successfully imported 13 classification models",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Classification Model Validation",
+      "success": true,
+      "message": "All classification models passed relationship validation",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Model Import Summary",
+      "success": true,
+      "message": "Imported 27/27 models (100.0% success rate)",
+      "details": {
+        "successful_models": 27,
+        "failed_models": []
+      },
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for Product",
+      "success": true,
+      "message": "Generated 9 nodes: ProductCreateNode, ProductReadNode, ProductUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ProductCategory",
+      "success": true,
+      "message": "Generated 9 nodes: ProductCategoryCreateNode, ProductCategoryReadNode, ProductCategoryUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ProductSpecification",
+      "success": true,
+      "message": "Generated 9 nodes: ProductSpecificationCreateNode, ProductSpecificationReadNode, ProductSpecificationUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for UNSPSCCode",
+      "success": true,
+      "message": "Generated 9 nodes: UNSPSCCodeCreateNode, UNSPSCCodeReadNode, UNSPSCCodeUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ETIMClass",
+      "success": true,
+      "message": "Generated 9 nodes: ETIMClassCreateNode, ETIMClassReadNode, ETIMClassUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for SafetyStandard",
+      "success": true,
+      "message": "Generated 9 nodes: SafetyStandardCreateNode, SafetyStandardReadNode, SafetyStandardUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ComplianceRequirement",
+      "success": true,
+      "message": "Generated 9 nodes: ComplianceRequirementCreateNode, ComplianceRequirementReadNode, ComplianceRequirementUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for PPERequirement",
+      "success": true,
+      "message": "Generated 9 nodes: PPERequirementCreateNode, PPERequirementReadNode, PPERequirementUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for Vendor",
+      "success": true,
+      "message": "Generated 9 nodes: VendorCreateNode, VendorReadNode, VendorUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ProductPricing",
+      "success": true,
+      "message": "Generated 9 nodes: ProductPricingCreateNode, ProductPricingReadNode, ProductPricingUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for InventoryLevel",
+      "success": true,
+      "message": "Generated 9 nodes: InventoryLevelCreateNode, InventoryLevelReadNode, InventoryLevelUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for UserProfile",
+      "success": true,
+      "message": "Generated 9 nodes: UserProfileCreateNode, UserProfileReadNode, UserProfileUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for SkillAssessment",
+      "success": true,
+      "message": "Generated 9 nodes: SkillAssessmentCreateNode, SkillAssessmentReadNode, SkillAssessmentUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for SafetyCertification",
+      "success": true,
+      "message": "Generated 9 nodes: SafetyCertificationCreateNode, SafetyCertificationReadNode, SafetyCertificationUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for Company",
+      "success": true,
+      "message": "Generated 9 nodes: CompanyCreateNode, CompanyReadNode, CompanyUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for User",
+      "success": true,
+      "message": "Generated 9 nodes: UserCreateNode, UserReadNode, UserUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for Customer",
+      "success": true,
+      "message": "Generated 9 nodes: CustomerCreateNode, CustomerReadNode, CustomerUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for Quote",
+      "success": true,
+      "message": "Generated 9 nodes: QuoteCreateNode, QuoteReadNode, QuoteUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ProductClassification",
+      "success": true,
+      "message": "Generated 9 nodes: ProductClassificationCreateNode, ProductClassificationReadNode, ProductClassificationUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ClassificationHistory",
+      "success": true,
+      "message": "Generated 9 nodes: ClassificationHistoryCreateNode, ClassificationHistoryReadNode, ClassificationHistoryUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ClassificationCache",
+      "success": true,
+      "message": "Generated 9 nodes: ClassificationCacheCreateNode, ClassificationCacheReadNode, ClassificationCacheUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ETIMAttribute",
+      "success": true,
+      "message": "Generated 9 nodes: ETIMAttributeCreateNode, ETIMAttributeReadNode, ETIMAttributeUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ClassificationRule",
+      "success": true,
+      "message": "Generated 9 nodes: ClassificationRuleCreateNode, ClassificationRuleReadNode, ClassificationRuleUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ClassificationFeedback",
+      "success": true,
+      "message": "Generated 9 nodes: ClassificationFeedbackCreateNode, ClassificationFeedbackReadNode, ClassificationFeedbackUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for ClassificationMetrics",
+      "success": true,
+      "message": "Generated 9 nodes: ClassificationMetricsCreateNode, ClassificationMetricsReadNode, ClassificationMetricsUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for Document",
+      "success": true,
+      "message": "Generated 9 nodes: DocumentCreateNode, DocumentReadNode, DocumentUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Nodes for DocumentProcessingQueue",
+      "success": true,
+      "message": "Generated 9 nodes: DocumentProcessingQueueCreateNode, DocumentProcessingQueueReadNode, DocumentProcessingQueueUpdateNode...",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Node Type Coverage",
+      "success": true,
+      "message": "Discovered 243 total nodes across 9 types",
+      "details": {
+        "total_nodes": 243,
+        "expected_nodes": 243,
+        "node_type_coverage": {
+          "CreateNode": 27,
+          "ReadNode": 27,
+          "UpdateNode": 27,
+          "DeleteNode": 27,
+          "ListNode": 27,
+          "BulkCreateNode": 0,
+          "BulkUpdateNode": 0,
+          "BulkDeleteNode": 0,
+          "BulkUpsertNode": 0
+        }
+      },
+      "timestamp": "2025-08-04T14:08:46.605015",
+      "execution_time": 12.479934930801392
+    },
+    {
+      "test_name": "Company Create Operation",
+      "success": true,
+      "message": "Successfully created workflow with CompanyCreateNode",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:46.607027",
+      "execution_time": 12.481947660446167
+    },
+    {
+      "test_name": "Company Create Operation Execution",
+      "success": true,
+      "message": "Workflow structure valid (DB execution expected to fail): Unified enterprise workflow execution failed: WorkflowExecutionError: Content-aware failure in node 'test_op': Node 'test_op' reported failure: Database query failed: [WinError 1225] The remote computer refused the network connection",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:50.706152",
+      "execution_time": 16.581072568893433
+    },
+    {
+      "test_name": "Product Classification Operation",
+      "success": true,
+      "message": "Successfully created workflow with ProductClassificationCreateNode",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:50.709398",
+      "execution_time": 16.584317922592163
+    },
+    {
+      "test_name": "Product Classification Operation Execution",
+      "success": true,
+      "message": "Workflow structure valid (DB execution expected to fail): Node 'test_op' missing required inputs: ['classified_at']. Provide these inputs via connections, node configuration, or runtime parameters",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:50.711167",
+      "execution_time": 16.586087703704834
+    },
+    {
+      "test_name": "Customer List Operation",
+      "success": true,
+      "message": "Successfully created workflow with CustomerListNode",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:50.712116",
+      "execution_time": 16.587036848068237
+    },
+    {
+      "test_name": "Customer List Operation Execution",
+      "success": true,
+      "message": "Workflow executed successfully with run_id: 6926fcfc-0559-45a9-a2f9-8872b6e244f3",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:58.874842",
+      "execution_time": 24.749762296676636
+    },
+    {
+      "test_name": "Bulk Config Creation",
+      "success": true,
+      "message": "Successfully created bulk config with batch_size=5000",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    },
+    {
+      "test_name": "Cache Config Creation",
+      "success": true,
+      "message": "Successfully created cache config with TTL=1800",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    },
+    {
+      "test_name": "Configuration Validation",
+      "success": true,
+      "message": "All configuration parameters validated successfully",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    },
+    {
+      "test_name": "Performance Recommendations Generation",
+      "success": true,
+      "message": "Generated 4 performance recommendations",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    },
+    {
+      "test_name": "Recommendation Structure Validation",
+      "success": true,
+      "message": "All recommendations have required fields",
+      "details": {},
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    },
+    {
+      "test_name": "Performance Monitoring Setup",
+      "success": false,
+      "message": "Failed to setup performance monitoring: Failed to add node 'monitor_pool' to workflow: Node 'ConnectionPoolMonitorNode' not found in registry. Available nodes: A2AAgentNode, A2ACoordinatorNode, A2AMonitoringNode, ABACPermissionEvaluatorNode, APIHealthCheckNode, APIKeyNode, AdaptiveSearchNode, AgentPoolManagerNode, AggregateNode, AsyncGraphQLClientNode, AsyncHTTPRequestNode, AsyncMergeNode, AsyncPostgreSQLVectorNode, AsyncPythonCodeNode, AsyncRESTClientNode, AsyncRateLimitedAPINode, AsyncSQLDatabaseNode, AsyncSwitchNode, AuditLogNode, BasicAuthNode, BatchProcessorNode, BehaviorAnalysisNode, CSVReaderNode, CSVWriterNode, CacheInvalidationNode, CacheNode, ChatAgent, ChunkTextExtractorNode, ClassificationCacheBulkCreateNode, ClassificationCacheBulkDeleteNode, ClassificationCacheBulkUpdateNode, ClassificationCacheBulkUpsertNode, ClassificationCacheCreateNode, ClassificationCacheDeleteNode, ClassificationCacheListNode, ClassificationCacheReadNode, ClassificationCacheUpdateNode, ClassificationFeedbackBulkCreateNode, ClassificationFeedbackBulkDeleteNode, ClassificationFeedbackBulkUpdateNode, ClassificationFeedbackBulkUpsertNode, ClassificationFeedbackCreateNode, ClassificationFeedbackDeleteNode, ClassificationFeedbackListNode, ClassificationFeedbackReadNode, ClassificationFeedbackUpdateNode, ClassificationHistoryBulkCreateNode, ClassificationHistoryBulkDeleteNode, ClassificationHistoryBulkUpdateNode, ClassificationHistoryBulkUpsertNode, ClassificationHistoryCreateNode, ClassificationHistoryDeleteNode, ClassificationHistoryListNode, ClassificationHistoryReadNode, ClassificationHistoryUpdateNode, ClassificationMetricsBulkCreateNode, ClassificationMetricsBulkDeleteNode, ClassificationMetricsBulkUpdateNode, ClassificationMetricsBulkUpsertNode, ClassificationMetricsCreateNode, ClassificationMetricsDeleteNode, ClassificationMetricsListNode, ClassificationMetricsReadNode, ClassificationMetricsUpdateNode, ClassificationRuleBulkCreateNode, ClassificationRuleBulkDeleteNode, ClassificationRuleBulkUpdateNode, ClassificationRuleBulkUpsertNode, ClassificationRuleCreateNode, ClassificationRuleDeleteNode, ClassificationRuleListNode, ClassificationRuleReadNode, ClassificationRuleUpdateNode, CloudNode, CompanyBulkCreateNode, CompanyBulkDeleteNode, CompanyBulkUpdateNode, CompanyBulkUpsertNode, CompanyCreateNode, CompanyDeleteNode, CompanyListNode, CompanyReadNode, CompanyUpdateNode, ConnectionDashboardNode, ContextFormatterNode, ContextualCompressorNode, ConvergenceCheckerNode, ConvergenceDetectorNode, CredentialTestingNode, CustomerBulkCreateNode, CustomerBulkDeleteNode, CustomerBulkUpdateNode, CustomerBulkUpsertNode, CustomerCreateNode, CustomerDeleteNode, CustomerListNode, CustomerReadNode, CustomerUpdateNode, DataFlowConnectionManager, DataLineageNode, DataTransformer, DeadlockDetectorNode, DirectoryIntegrationNode, DirectoryReaderNode, DiscordAlertNode, DistributedTransactionManagerNode, DockerNode, DocumentBulkCreateNode, DocumentBulkDeleteNode, DocumentBulkUpdateNode, DocumentBulkUpsertNode, DocumentCreateNode, DocumentDeleteNode, DocumentListNode, DocumentProcessingQueueBulkCreateNode, DocumentProcessingQueueBulkDeleteNode, DocumentProcessingQueueBulkUpdateNode, DocumentProcessingQueueBulkUpsertNode, DocumentProcessingQueueCreateNode, DocumentProcessingQueueDeleteNode, DocumentProcessingQueueListNode, DocumentProcessingQueueReadNode, DocumentProcessingQueueUpdateNode, DocumentProcessorNode, DocumentReadNode, DocumentSourceNode, DocumentUpdateNode, ETIMAttributeBulkCreateNode, ETIMAttributeBulkDeleteNode, ETIMAttributeBulkUpdateNode, ETIMAttributeBulkUpsertNode, ETIMAttributeCreateNode, ETIMAttributeDeleteNode, ETIMAttributeListNode, ETIMAttributeReadNode, ETIMAttributeUpdateNode, EdgeCoordinationNode, EdgeDataNode, EdgeMigrationNode, EdgeMonitoringNode, EdgeStateMachine, EdgeWarmingNode, EmbeddingGeneratorNode, EmbeddingNode, EnterpriseAuditLogNode, EnterpriseAuditLoggerNode, EnterpriseAuthProviderNode, EnterpriseMLCPExecutorNode, EnterpriseSecurityEventNode, EventGeneratorNode, EventStreamNode, FileDiscoveryNode, FilterNode, FunctionCallingAgent, GraphQLClientNode, HTTPRequestNode, HealthCheckNode, HierarchicalChunkerNode, HybridRetrieverNode, HybridSearchNode, IntelligentCacheNode, IterativeLLMAgentNode, JSONReaderNode, JSONWriterNode, KafkaConsumerNode, KubernetesNode, LLMAgentNode, LogProcessorNode, MCPAgentNode, MCPServiceDiscoveryNode, Map, MergeNode, MetricsCollectorNode, MigrationNode, ModelPredictor, MultiCriteriaConvergenceNode, MultiFactorAuthNode, NamedEntityRecognizer, NaturalLanguageFilterNode, OAuth2Node, OptimisticLockingNode, OrchestrationManagerNode, PerformanceAnomalyNode, PermissionCheckNode, PlanningAgent, PlatformNode, ProblemAnalyzerNode, ProductClassificationBulkCreateNode, ProductClassificationBulkDeleteNode, ProductClassificationBulkUpdateNode, ProductClassificationBulkUpsertNode, ProductClassificationCreateNode, ProductClassificationDeleteNode, ProductClassificationListNode, ProductClassificationReadNode, ProductClassificationUpdateNode, PythonCodeNode, QueryAnalysisNode, QueryRouterNode, QuerySourceNode, QueryTextWrapperNode, QuoteBulkCreateNode, QuoteBulkDeleteNode, QuoteBulkUpdateNode, QuoteBulkUpsertNode, QuoteCreateNode, QuoteDeleteNode, QuoteListNode, QuoteReadNode, QuoteUpdateNode, RESTClientNode, RaceConditionDetectorNode, RateLimitedAPINode, RedisNode, RelevanceScorerNode, ResourceAnalyzerNode, ResourceOptimizerNode, ResourceScalerNode, RetrievalAgent, RiskAssessmentNode, RoleManagementNode, RotatingCredentialNode, SQLDatabaseNode, SSOAuthenticationNode, SagaCoordinatorNode, SagaStepNode, SchemaModificationNode, SecurityEventNode, SecurityScannerNode, SelfOrganizingAgentNode, SemanticAgentMatchingNode, SemanticChunkerNode, SemanticMemorySearchNode, SemanticMemoryStoreNode, SentimentAnalyzer, SessionManagementNode, SharePointGraphReader, SharePointGraphWriter, SharedMemoryPoolNode, SmartMergeNode, SolutionEvaluatorNode, Sort, StatisticalChunkerNode, StreamPublisherNode, StreamingAnalyticsNode, SwitchNode, TeamFormationNode, TenantAssignmentNode, TextClassifier, TextEmbedder, TextReaderNode, TextSplitterNode, TextSummarizer, TextWriterNode, ThreatDetectionNode, TransactionCommitNode, TransactionMetricsNode, TransactionMonitorNode, TransactionRollbackNode, TransactionScopeNode, TwoPhaseCommitCoordinatorNode, UserBulkCreateNode, UserBulkDeleteNode, UserBulkUpdateNode, UserBulkUpsertNode, UserCreateNode, UserDeleteNode, UserListNode, UserManagementNode, UserReadNode, UserUpdateNode, VectorDatabaseNode, WebSocketNode, WorkflowConnectionPool, WorkflowNode",
+      "details": {
+        "error_type": "WorkflowValidationError",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\kailash\\workflow\\builder.py\", line 1055, in build\n    workflow.add_node(\n  File \"C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\kailash\\workflow\\graph.py\", line 219, in add_node\n    node_class = NodeRegistry.get(node_or_type)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\kailash\\nodes\\base.py\", line 2142, in get\n    raise NodeConfigurationError(\nkailash.sdk_exceptions.NodeConfigurationError: Node 'ConnectionPoolMonitorNode' not found in registry. Available nodes: A2AAgentNode, A2ACoordinatorNode, A2AMonitoringNode, ABACPermissionEvaluatorNode, APIHealthCheckNode, APIKeyNode, AdaptiveSearchNode, AgentPoolManagerNode, AggregateNode, AsyncGraphQLClientNode, AsyncHTTPRequestNode, AsyncMergeNode, AsyncPostgreSQLVectorNode, AsyncPythonCodeNode, AsyncRESTClientNode, AsyncRateLimitedAPINode, AsyncSQLDatabaseNode, AsyncSwitchNode, AuditLogNode, BasicAuthNode, BatchProcessorNode, BehaviorAnalysisNode, CSVReaderNode, CSVWriterNode, CacheInvalidationNode, CacheNode, ChatAgent, ChunkTextExtractorNode, ClassificationCacheBulkCreateNode, ClassificationCacheBulkDeleteNode, ClassificationCacheBulkUpdateNode, ClassificationCacheBulkUpsertNode, ClassificationCacheCreateNode, ClassificationCacheDeleteNode, ClassificationCacheListNode, ClassificationCacheReadNode, ClassificationCacheUpdateNode, ClassificationFeedbackBulkCreateNode, ClassificationFeedbackBulkDeleteNode, ClassificationFeedbackBulkUpdateNode, ClassificationFeedbackBulkUpsertNode, ClassificationFeedbackCreateNode, ClassificationFeedbackDeleteNode, ClassificationFeedbackListNode, ClassificationFeedbackReadNode, ClassificationFeedbackUpdateNode, ClassificationHistoryBulkCreateNode, ClassificationHistoryBulkDeleteNode, ClassificationHistoryBulkUpdateNode, ClassificationHistoryBulkUpsertNode, ClassificationHistoryCreateNode, ClassificationHistoryDeleteNode, ClassificationHistoryListNode, ClassificationHistoryReadNode, ClassificationHistoryUpdateNode, ClassificationMetricsBulkCreateNode, ClassificationMetricsBulkDeleteNode, ClassificationMetricsBulkUpdateNode, ClassificationMetricsBulkUpsertNode, ClassificationMetricsCreateNode, ClassificationMetricsDeleteNode, ClassificationMetricsListNode, ClassificationMetricsReadNode, ClassificationMetricsUpdateNode, ClassificationRuleBulkCreateNode, ClassificationRuleBulkDeleteNode, ClassificationRuleBulkUpdateNode, ClassificationRuleBulkUpsertNode, ClassificationRuleCreateNode, ClassificationRuleDeleteNode, ClassificationRuleListNode, ClassificationRuleReadNode, ClassificationRuleUpdateNode, CloudNode, CompanyBulkCreateNode, CompanyBulkDeleteNode, CompanyBulkUpdateNode, CompanyBulkUpsertNode, CompanyCreateNode, CompanyDeleteNode, CompanyListNode, CompanyReadNode, CompanyUpdateNode, ConnectionDashboardNode, ContextFormatterNode, ContextualCompressorNode, ConvergenceCheckerNode, ConvergenceDetectorNode, CredentialTestingNode, CustomerBulkCreateNode, CustomerBulkDeleteNode, CustomerBulkUpdateNode, CustomerBulkUpsertNode, CustomerCreateNode, CustomerDeleteNode, CustomerListNode, CustomerReadNode, CustomerUpdateNode, DataFlowConnectionManager, DataLineageNode, DataTransformer, DeadlockDetectorNode, DirectoryIntegrationNode, DirectoryReaderNode, DiscordAlertNode, DistributedTransactionManagerNode, DockerNode, DocumentBulkCreateNode, DocumentBulkDeleteNode, DocumentBulkUpdateNode, DocumentBulkUpsertNode, DocumentCreateNode, DocumentDeleteNode, DocumentListNode, DocumentProcessingQueueBulkCreateNode, DocumentProcessingQueueBulkDeleteNode, DocumentProcessingQueueBulkUpdateNode, DocumentProcessingQueueBulkUpsertNode, DocumentProcessingQueueCreateNode, DocumentProcessingQueueDeleteNode, DocumentProcessingQueueListNode, DocumentProcessingQueueReadNode, DocumentProcessingQueueUpdateNode, DocumentProcessorNode, DocumentReadNode, DocumentSourceNode, DocumentUpdateNode, ETIMAttributeBulkCreateNode, ETIMAttributeBulkDeleteNode, ETIMAttributeBulkUpdateNode, ETIMAttributeBulkUpsertNode, ETIMAttributeCreateNode, ETIMAttributeDeleteNode, ETIMAttributeListNode, ETIMAttributeReadNode, ETIMAttributeUpdateNode, EdgeCoordinationNode, EdgeDataNode, EdgeMigrationNode, EdgeMonitoringNode, EdgeStateMachine, EdgeWarmingNode, EmbeddingGeneratorNode, EmbeddingNode, EnterpriseAuditLogNode, EnterpriseAuditLoggerNode, EnterpriseAuthProviderNode, EnterpriseMLCPExecutorNode, EnterpriseSecurityEventNode, EventGeneratorNode, EventStreamNode, FileDiscoveryNode, FilterNode, FunctionCallingAgent, GraphQLClientNode, HTTPRequestNode, HealthCheckNode, HierarchicalChunkerNode, HybridRetrieverNode, HybridSearchNode, IntelligentCacheNode, IterativeLLMAgentNode, JSONReaderNode, JSONWriterNode, KafkaConsumerNode, KubernetesNode, LLMAgentNode, LogProcessorNode, MCPAgentNode, MCPServiceDiscoveryNode, Map, MergeNode, MetricsCollectorNode, MigrationNode, ModelPredictor, MultiCriteriaConvergenceNode, MultiFactorAuthNode, NamedEntityRecognizer, NaturalLanguageFilterNode, OAuth2Node, OptimisticLockingNode, OrchestrationManagerNode, PerformanceAnomalyNode, PermissionCheckNode, PlanningAgent, PlatformNode, ProblemAnalyzerNode, ProductClassificationBulkCreateNode, ProductClassificationBulkDeleteNode, ProductClassificationBulkUpdateNode, ProductClassificationBulkUpsertNode, ProductClassificationCreateNode, ProductClassificationDeleteNode, ProductClassificationListNode, ProductClassificationReadNode, ProductClassificationUpdateNode, PythonCodeNode, QueryAnalysisNode, QueryRouterNode, QuerySourceNode, QueryTextWrapperNode, QuoteBulkCreateNode, QuoteBulkDeleteNode, QuoteBulkUpdateNode, QuoteBulkUpsertNode, QuoteCreateNode, QuoteDeleteNode, QuoteListNode, QuoteReadNode, QuoteUpdateNode, RESTClientNode, RaceConditionDetectorNode, RateLimitedAPINode, RedisNode, RelevanceScorerNode, ResourceAnalyzerNode, ResourceOptimizerNode, ResourceScalerNode, RetrievalAgent, RiskAssessmentNode, RoleManagementNode, RotatingCredentialNode, SQLDatabaseNode, SSOAuthenticationNode, SagaCoordinatorNode, SagaStepNode, SchemaModificationNode, SecurityEventNode, SecurityScannerNode, SelfOrganizingAgentNode, SemanticAgentMatchingNode, SemanticChunkerNode, SemanticMemorySearchNode, SemanticMemoryStoreNode, SentimentAnalyzer, SessionManagementNode, SharePointGraphReader, SharePointGraphWriter, SharedMemoryPoolNode, SmartMergeNode, SolutionEvaluatorNode, Sort, StatisticalChunkerNode, StreamPublisherNode, StreamingAnalyticsNode, SwitchNode, TeamFormationNode, TenantAssignmentNode, TextClassifier, TextEmbedder, TextReaderNode, TextSplitterNode, TextSummarizer, TextWriterNode, ThreatDetectionNode, TransactionCommitNode, TransactionMetricsNode, TransactionMonitorNode, TransactionRollbackNode, TransactionScopeNode, TwoPhaseCommitCoordinatorNode, UserBulkCreateNode, UserBulkDeleteNode, UserBulkUpdateNode, UserBulkUpsertNode, UserCreateNode, UserDeleteNode, UserListNode, UserManagementNode, UserReadNode, UserUpdateNode, VectorDatabaseNode, WebSocketNode, WorkflowConnectionPool, WorkflowNode\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\test_dataflow_implementation.py\", line 379, in test_performance_monitoring_setup\n    built_monitoring = monitoring_workflow.build()\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\kailash\\workflow\\builder.py\", line 1059, in build\n    raise WorkflowValidationError(\nkailash.sdk_exceptions.WorkflowValidationError: Failed to add node 'monitor_pool' to workflow: Node 'ConnectionPoolMonitorNode' not found in registry. Available nodes: A2AAgentNode, A2ACoordinatorNode, A2AMonitoringNode, ABACPermissionEvaluatorNode, APIHealthCheckNode, APIKeyNode, AdaptiveSearchNode, AgentPoolManagerNode, AggregateNode, AsyncGraphQLClientNode, AsyncHTTPRequestNode, AsyncMergeNode, AsyncPostgreSQLVectorNode, AsyncPythonCodeNode, AsyncRESTClientNode, AsyncRateLimitedAPINode, AsyncSQLDatabaseNode, AsyncSwitchNode, AuditLogNode, BasicAuthNode, BatchProcessorNode, BehaviorAnalysisNode, CSVReaderNode, CSVWriterNode, CacheInvalidationNode, CacheNode, ChatAgent, ChunkTextExtractorNode, ClassificationCacheBulkCreateNode, ClassificationCacheBulkDeleteNode, ClassificationCacheBulkUpdateNode, ClassificationCacheBulkUpsertNode, ClassificationCacheCreateNode, ClassificationCacheDeleteNode, ClassificationCacheListNode, ClassificationCacheReadNode, ClassificationCacheUpdateNode, ClassificationFeedbackBulkCreateNode, ClassificationFeedbackBulkDeleteNode, ClassificationFeedbackBulkUpdateNode, ClassificationFeedbackBulkUpsertNode, ClassificationFeedbackCreateNode, ClassificationFeedbackDeleteNode, ClassificationFeedbackListNode, ClassificationFeedbackReadNode, ClassificationFeedbackUpdateNode, ClassificationHistoryBulkCreateNode, ClassificationHistoryBulkDeleteNode, ClassificationHistoryBulkUpdateNode, ClassificationHistoryBulkUpsertNode, ClassificationHistoryCreateNode, ClassificationHistoryDeleteNode, ClassificationHistoryListNode, ClassificationHistoryReadNode, ClassificationHistoryUpdateNode, ClassificationMetricsBulkCreateNode, ClassificationMetricsBulkDeleteNode, ClassificationMetricsBulkUpdateNode, ClassificationMetricsBulkUpsertNode, ClassificationMetricsCreateNode, ClassificationMetricsDeleteNode, ClassificationMetricsListNode, ClassificationMetricsReadNode, ClassificationMetricsUpdateNode, ClassificationRuleBulkCreateNode, ClassificationRuleBulkDeleteNode, ClassificationRuleBulkUpdateNode, ClassificationRuleBulkUpsertNode, ClassificationRuleCreateNode, ClassificationRuleDeleteNode, ClassificationRuleListNode, ClassificationRuleReadNode, ClassificationRuleUpdateNode, CloudNode, CompanyBulkCreateNode, CompanyBulkDeleteNode, CompanyBulkUpdateNode, CompanyBulkUpsertNode, CompanyCreateNode, CompanyDeleteNode, CompanyListNode, CompanyReadNode, CompanyUpdateNode, ConnectionDashboardNode, ContextFormatterNode, ContextualCompressorNode, ConvergenceCheckerNode, ConvergenceDetectorNode, CredentialTestingNode, CustomerBulkCreateNode, CustomerBulkDeleteNode, CustomerBulkUpdateNode, CustomerBulkUpsertNode, CustomerCreateNode, CustomerDeleteNode, CustomerListNode, CustomerReadNode, CustomerUpdateNode, DataFlowConnectionManager, DataLineageNode, DataTransformer, DeadlockDetectorNode, DirectoryIntegrationNode, DirectoryReaderNode, DiscordAlertNode, DistributedTransactionManagerNode, DockerNode, DocumentBulkCreateNode, DocumentBulkDeleteNode, DocumentBulkUpdateNode, DocumentBulkUpsertNode, DocumentCreateNode, DocumentDeleteNode, DocumentListNode, DocumentProcessingQueueBulkCreateNode, DocumentProcessingQueueBulkDeleteNode, DocumentProcessingQueueBulkUpdateNode, DocumentProcessingQueueBulkUpsertNode, DocumentProcessingQueueCreateNode, DocumentProcessingQueueDeleteNode, DocumentProcessingQueueListNode, DocumentProcessingQueueReadNode, DocumentProcessingQueueUpdateNode, DocumentProcessorNode, DocumentReadNode, DocumentSourceNode, DocumentUpdateNode, ETIMAttributeBulkCreateNode, ETIMAttributeBulkDeleteNode, ETIMAttributeBulkUpdateNode, ETIMAttributeBulkUpsertNode, ETIMAttributeCreateNode, ETIMAttributeDeleteNode, ETIMAttributeListNode, ETIMAttributeReadNode, ETIMAttributeUpdateNode, EdgeCoordinationNode, EdgeDataNode, EdgeMigrationNode, EdgeMonitoringNode, EdgeStateMachine, EdgeWarmingNode, EmbeddingGeneratorNode, EmbeddingNode, EnterpriseAuditLogNode, EnterpriseAuditLoggerNode, EnterpriseAuthProviderNode, EnterpriseMLCPExecutorNode, EnterpriseSecurityEventNode, EventGeneratorNode, EventStreamNode, FileDiscoveryNode, FilterNode, FunctionCallingAgent, GraphQLClientNode, HTTPRequestNode, HealthCheckNode, HierarchicalChunkerNode, HybridRetrieverNode, HybridSearchNode, IntelligentCacheNode, IterativeLLMAgentNode, JSONReaderNode, JSONWriterNode, KafkaConsumerNode, KubernetesNode, LLMAgentNode, LogProcessorNode, MCPAgentNode, MCPServiceDiscoveryNode, Map, MergeNode, MetricsCollectorNode, MigrationNode, ModelPredictor, MultiCriteriaConvergenceNode, MultiFactorAuthNode, NamedEntityRecognizer, NaturalLanguageFilterNode, OAuth2Node, OptimisticLockingNode, OrchestrationManagerNode, PerformanceAnomalyNode, PermissionCheckNode, PlanningAgent, PlatformNode, ProblemAnalyzerNode, ProductClassificationBulkCreateNode, ProductClassificationBulkDeleteNode, ProductClassificationBulkUpdateNode, ProductClassificationBulkUpsertNode, ProductClassificationCreateNode, ProductClassificationDeleteNode, ProductClassificationListNode, ProductClassificationReadNode, ProductClassificationUpdateNode, PythonCodeNode, QueryAnalysisNode, QueryRouterNode, QuerySourceNode, QueryTextWrapperNode, QuoteBulkCreateNode, QuoteBulkDeleteNode, QuoteBulkUpdateNode, QuoteBulkUpsertNode, QuoteCreateNode, QuoteDeleteNode, QuoteListNode, QuoteReadNode, QuoteUpdateNode, RESTClientNode, RaceConditionDetectorNode, RateLimitedAPINode, RedisNode, RelevanceScorerNode, ResourceAnalyzerNode, ResourceOptimizerNode, ResourceScalerNode, RetrievalAgent, RiskAssessmentNode, RoleManagementNode, RotatingCredentialNode, SQLDatabaseNode, SSOAuthenticationNode, SagaCoordinatorNode, SagaStepNode, SchemaModificationNode, SecurityEventNode, SecurityScannerNode, SelfOrganizingAgentNode, SemanticAgentMatchingNode, SemanticChunkerNode, SemanticMemorySearchNode, SemanticMemoryStoreNode, SentimentAnalyzer, SessionManagementNode, SharePointGraphReader, SharePointGraphWriter, SharedMemoryPoolNode, SmartMergeNode, SolutionEvaluatorNode, Sort, StatisticalChunkerNode, StreamPublisherNode, StreamingAnalyticsNode, SwitchNode, TeamFormationNode, TenantAssignmentNode, TextClassifier, TextEmbedder, TextReaderNode, TextSplitterNode, TextSummarizer, TextWriterNode, ThreatDetectionNode, TransactionCommitNode, TransactionMetricsNode, TransactionMonitorNode, TransactionRollbackNode, TransactionScopeNode, TwoPhaseCommitCoordinatorNode, UserBulkCreateNode, UserBulkDeleteNode, UserBulkUpdateNode, UserBulkUpsertNode, UserCreateNode, UserDeleteNode, UserListNode, UserManagementNode, UserReadNode, UserUpdateNode, VectorDatabaseNode, WebSocketNode, WorkflowConnectionPool, WorkflowNode\n"
+      },
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    },
+    {
+      "test_name": "DataFlow Configuration Validation",
+      "success": false,
+      "message": "Failed to validate DataFlow configuration: argument of type 'bool' is not iterable",
+      "details": {
+        "error_type": "TypeError",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\test_dataflow_implementation.py\", line 413, in test_dataflow_configuration_validation\n    if feature in config:\n       ^^^^^^^^^^^^^^^^^\nTypeError: argument of type 'bool' is not iterable\n"
+      },
+      "timestamp": "2025-08-04T14:08:58.892438",
+      "execution_time": 24.76735806465149
+    }
+  ],
+  "timestamp": "2025-08-04T14:08:58.892438"
+}

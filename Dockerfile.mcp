@@ -1,0 +1,71 @@
+# Clean Docker MCP Server - NO Windows Dependencies
+# Multi-stage build for production deployment
+
+# Build stage
+FROM python:3.11-slim as builder
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements first for better caching
+COPY requirements-mcp.txt /tmp/
+RUN pip install --no-cache-dir -r /tmp/requirements-mcp.txt
+
+# Production stage
+FROM python:3.11-slim
+
+# Set environment variables for production
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r mcp \
+    && useradd -r -g mcp mcp
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Create app directory
+WORKDIR /app
+
+# Copy application code
+COPY docker_mcp_server.py /app/
+COPY --chown=mcp:mcp . /app/
+
+# Set up non-root user
+USER mcp
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Default environment variables
+ENV MCP_PORT=3001 \
+    MCP_HOST=0.0.0.0 \
+    MCP_AUTH_TYPE=jwt \
+    DATABASE_URL=postgresql://postgres:password@postgres:5432/mcp_db \
+    REDIS_URL=redis://redis:6379/0
+
+# Start command
+CMD ["python", "docker_mcp_server.py"]

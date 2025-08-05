@@ -1,0 +1,74 @@
+
+TEST INFRASTRUCTURE ANALYSIS REPORT
+===================================
+Generated: 2025-08-03 23:16:01
+
+OVERALL METRICS
+--------------
+Overall Success Rate: 0.0%
+Target Success Rate: 95.0%
+Gap to Target: 95.0%
+
+Total Tests: 0
+Passed: 0
+Failed: 0
+Total Duration: 68.00s
+
+INFRASTRUCTURE STATUS
+--------------------
+Docker Available: False
+Services Ready: False
+Mock Fallback Needed: True
+
+TIER-BY-TIER ANALYSIS
+====================
+
+Tier 1 (Unit):
+  Tests: 0
+  Passed: 0
+  Failed: 0
+  Success Rate: 0.0%
+  Duration: 12.00s
+  Avg Test Time: 0.000s
+  Target: <1s per test
+  Performance: PASS
+
+
+Tier 2 (Integration):
+  Tests: 0
+  Passed: 0
+  Failed: 0
+  Success Rate: 0.0%
+  Duration: 14.81s
+  Avg Test Time: 0.000s
+  Target: <5s per test
+  Performance: PASS
+
+
+Tier 3 (E2E):
+  Tests: 0
+  Passed: 0
+  Failed: 0
+  Success Rate: 0.0%
+  Duration: 41.20s
+  Avg Test Time: 0.000s
+  Target: <10s per test
+  Performance: PASS
+
+
+PERFORMANCE COMPLIANCE
+---------------------
+Tier 1 (<1s): PASS
+Tier 2 (<5s): PASS  
+Tier 3 (<10s): PASS
+
+RECOMMENDATIONS
+--------------
+Priority Actions to Reach 95% Success Rate:
+1. Fix 0 failing tests
+2. Address infrastructure dependencies
+3. Implement proper test isolation
+
+4. Set up Docker test infrastructure for Integration/E2E tests
+5. Configure test-env scripts for service management
+6. Implement realistic mock fallbacks for Windows development

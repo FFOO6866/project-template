@@ -1,0 +1,13 @@
+{
+  "success": false,
+  "message": "Docker not available - cannot proceed with database testing",
+  "results": [
+    {
+      "test_name": "Docker Availability",
+      "success": false,
+      "message": "Docker not found in PATH",
+      "details": {},
+      "timestamp": "2025-08-04T14:14:21.891729"
+    }
+  ]
+}

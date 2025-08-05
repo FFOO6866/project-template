@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-08-04T23:25:23.173970",
+  "tests": {
+    "postgresql_connection": false,
+    "sdk_availability": {
+      "core_sdk": false,
+      "dataflow": true
+    },
+    "workflow_creation": false,
+    "dataflow_model": false,
+    "dataflow_operations": false
+  }
+}

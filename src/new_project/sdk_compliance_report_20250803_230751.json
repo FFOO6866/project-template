@@ -1,0 +1,206 @@
+{
+  "validation_id": "de5ff410-445d-4619-ad74-0923215d2ca4",
+  "timestamp": "2025-08-03T23:07:51.084970",
+  "validation_scope": "comprehensive_sdk_compliance",
+  "results": {
+    "node_registration": {
+      "nodes_validated": 6,
+      "compliant_nodes": 6,
+      "node_details": {
+        "UNSPSCClassificationNode": {
+          "compliant": true,
+          "compliance_checks": {
+            "has_run_method": true,
+            "has_get_parameters": true,
+            "run_is_primary_interface": true,
+            "parameter_schema_valid": true,
+            "performance_optimized": true
+          },
+          "execution_test": {
+            "execution_successful": true,
+            "execution_time_ms": 18.39280128479004,
+            "within_performance_sla": true,
+            "result_structure_valid": true,
+            "has_performance_metrics": false
+          },
+          "issues": [],
+          "warnings": []
+        },
+        "ETIMClassificationNode": {
+          "compliant": true,
+          "compliance_checks": {
+            "has_run_method": true,
+            "has_get_parameters": true,
+            "run_is_primary_interface": true,
+            "parameter_schema_valid": true,
+            "performance_optimized": true
+          },
+          "execution_test": {
+            "execution_successful": true,
+            "execution_time_ms": 0.0,
+            "within_performance_sla": true,
+            "result_structure_valid": true,
+            "has_performance_metrics": false
+          },
+          "issues": [],
+          "warnings": []
+        },
+        "DualClassificationWorkflowNode": {
+          "compliant": true,
+          "compliance_checks": {
+            "has_run_method": true,
+            "has_get_parameters": true,
+            "run_is_primary_interface": true,
+            "parameter_schema_valid": true,
+            "performance_optimized": false
+          },
+          "execution_test": {
+            "execution_successful": true,
+            "execution_time_ms": 0.0,
+            "within_performance_sla": true,
+            "result_structure_valid": true,
+            "has_performance_metrics": true
+          },
+          "issues": [],
+          "warnings": []
+        },
+        "SafetyComplianceNode": {
+          "compliant": true,
+          "compliance_checks": {
+            "has_run_method": true,
+            "has_get_parameters": true,
+            "run_is_primary_interface": true,
+            "parameter_schema_valid": true,
+            "performance_optimized": false
+          },
+          "execution_test": {
+            "execution_successful": true,
+            "execution_time_ms": 0.0,
+            "within_performance_sla": true,
+            "result_structure_valid": true,
+            "has_performance_metrics": true
+          },
+          "issues": [],
+          "warnings": []
+        },
+        "SecureGovernedNode": {
+          "compliant": true,
+          "compliance_checks": {
+            "has_run_method": true,
+            "has_get_parameters": true,
+            "run_is_primary_interface": true,
+            "parameter_schema_valid": true,
+            "performance_optimized": true
+          },
+          "execution_test": {
+            "execution_successful": true,
+            "execution_time_ms": 0.0,
+            "within_performance_sla": true,
+            "result_structure_valid": true,
+            "has_performance_metrics": true
+          },
+          "issues": [],
+          "warnings": []
+        },
+        "ExampleComplianceNode": {
+          "compliant": true,
+          "compliance_checks": {
+            "has_run_method": true,
+            "has_get_parameters": true,
+            "run_is_primary_interface": true,
+            "parameter_schema_valid": true,
+            "performance_optimized": true
+          },
+          "execution_test": {
+            "execution_successful": true,
+            "execution_time_ms": 0.0,
+            "within_performance_sla": true,
+            "result_structure_valid": true,
+            "has_performance_metrics": true
+          },
+          "issues": [],
+          "warnings": []
+        }
+      },
+      "critical_issues": [],
+      "warnings": [],
+      "compliance_rate": 1.0,
+      "processing_time_ms": 431.3638210296631,
+      "within_sla": true
+    },
+    "parameter_handling": {
+      "method_1_config_supported": true,
+      "method_2_connections_supported": true,
+      "method_3_runtime_supported": true,
+      "all_methods_demonstrated": true,
+      "total_nodes_in_demo": 0,
+      "parameter_validation_errors": [],
+      "processing_time_ms": 0.0,
+      "compliance_score": 1.0,
+      "within_sla": true
+    },
+    "workflow_execution": {
+      "correct_execution_pattern": true,
+      "string_based_nodes": true,
+      "four_parameter_connections": true,
+      "build_before_execute": true,
+      "sdk_compliant": true,
+      "cross_framework_compatible": true,
+      "windows_compatible": true,
+      "works_without_docker": true,
+      "processing_time_ms": 0.0,
+      "compliance_score": 1.0,
+      "within_sla": true
+    },
+    "performance": {
+      "individual_node_performance": {
+        "execution_time_ms": 0.0,
+        "within_target": true,
+        "target_ms": 500,
+        "performance_rating": "excellent"
+      },
+      "has_performance_metrics": false,
+      "has_sla_monitoring": false,
+      "overall_performance_score": 0.3333333333333333,
+      "processing_time_ms": 0.0,
+      "within_sla": true
+    },
+    "security_governance": {
+      "secure_governed_node_exists": true,
+      "has_parameter_validation": true,
+      "has_audit_logging": true,
+      "has_sensitive_data_sanitization": true,
+      "has_security_warnings": true,
+      "has_performance_monitoring": true,
+      "enterprise_ready": true,
+      "processing_time_ms": 0.0,
+      "parameter_validation_works": true,
+      "security_score": 1.0,
+      "within_sla": true
+    },
+    "cross_framework": {
+      "core_sdk_compatible": true,
+      "dataflow_ready": true,
+      "nexus_deployable": true,
+      "parameter_methods_consistent": true,
+      "workflow_patterns_unified": true,
+      "cross_framework_score": 1.0,
+      "processing_time_ms": 0.0,
+      "integration_grade": "A",
+      "within_sla": true
+    }
+  },
+  "performance_metrics": {
+    "total_validation_time_ms": 431.3638210296631,
+    "validation_efficiency": "excellent",
+    "validation_within_sla": true
+  },
+  "recommendations": [
+    "Implement comprehensive performance monitoring across all nodes",
+    "Add audit logging for sensitive operations",
+    "Optimize for Windows development environment compatibility",
+    "Prepare infrastructure for Docker deployment when available"
+  ],
+  "overall_score": 0.8,
+  "compliance_status": "acceptable_compliance"
+}

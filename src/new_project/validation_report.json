@@ -1,0 +1,83 @@
+{
+  "timestamp": "2025-08-05T17:29:48.739659",
+  "platform": "win32",
+  "python_version": "3.11.9",
+  "results": [
+    {
+      "test": "Python Version",
+      "status": "passed",
+      "details": "Python 3.11.9"
+    },
+    {
+      "test": "Kailash SDK",
+      "status": "failed",
+      "details": "No module named 'resource'"
+    },
+    {
+      "test": "Docker",
+      "status": "failed",
+      "details": "Docker not found"
+    },
+    {
+      "test": "PostgreSQL",
+      "status": "passed",
+      "details": "PostgreSQL connection successful"
+    },
+    {
+      "test": "Redis",
+      "status": "warning",
+      "details": "Redis not available: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it."
+    },
+    {
+      "test": "Package: pytest",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: numpy",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: pandas",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: sqlalchemy",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: pydantic",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: fastapi",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: uvicorn",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: websockets",
+      "status": "passed",
+      "details": "Installed"
+    },
+    {
+      "test": "Package: aiofiles",
+      "status": "passed",
+      "details": "Installed"
+    }
+  ],
+  "summary": {
+    "total": 14,
+    "passed": 11,
+    "failed": 2,
+    "warnings": 1
+  }
+}

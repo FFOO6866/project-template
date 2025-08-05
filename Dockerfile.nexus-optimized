@@ -1,0 +1,99 @@
+# Multi-stage Docker build for optimized Nexus platform
+# Production-ready container with zero Windows dependencies
+
+# Stage 1: Build stage with development tools
+FROM python:3.11-alpine as builder
+
+# Set environment variables for build optimization
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    postgresql-dev \
+    build-base \
+    linux-headers
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements first for better caching
+COPY requirements-nexus.txt /tmp/
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r /tmp/requirements-nexus.txt
+
+# Stage 2: Runtime stage with minimal footprint
+FROM python:3.11-alpine
+
+# Create nexus user for security
+RUN addgroup -g 1001 nexus && \
+    adduser -D -u 1001 -G nexus nexus
+
+# Set environment variables for production
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    NEXUS_ENV=production \
+    NEXUS_HOST=0.0.0.0 \
+    NEXUS_API_PORT=8000 \
+    NEXUS_MCP_PORT=3001 \
+    NEXUS_LOG_LEVEL=INFO \
+    NEXUS_WORKERS=4 \
+    NEXUS_MAX_CONNECTIONS=100
+
+# Install runtime dependencies only
+RUN apk add --no-cache \
+    libpq \
+    libffi \
+    ca-certificates \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Create application directories
+RUN mkdir -p /app/logs /app/data /app/config && \
+    chown -R nexus:nexus /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code with proper ownership
+COPY --chown=nexus:nexus nexus-docker-config.py /app/
+COPY --chown=nexus:nexus src/ /app/src/
+
+# Create health check script
+RUN echo '#!/bin/sh\ncurl -f http://localhost:${NEXUS_API_PORT}/health || exit 1' > /app/healthcheck.sh && \
+    chmod +x /app/healthcheck.sh && \
+    chown nexus:nexus /app/healthcheck.sh
+
+# Switch to non-root user
+USER nexus
+
+# Expose ports
+EXPOSE ${NEXUS_API_PORT} ${NEXUS_MCP_PORT}
+
+# Add health check with proper configuration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /app/healthcheck.sh
+
+# Set volume for persistent data
+VOLUME ["/app/data", "/app/logs"]
+
+# Default command with graceful shutdown
+CMD ["python", "-m", "nexus-docker-config"]
+
+# Labels for container metadata
+LABEL maintainer="Kailash SDK Team" \
+      version="1.0.0" \
+      description="Docker-optimized Nexus multi-channel platform" \
+      org.opencontainers.image.source="https://github.com/kailash-sdk/nexus" \
+      org.opencontainers.image.title="Nexus Platform" \
+      org.opencontainers.image.description="Zero-configuration multi-channel platform (API + CLI + MCP)"

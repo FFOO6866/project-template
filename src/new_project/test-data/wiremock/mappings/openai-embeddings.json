@@ -1,0 +1,38 @@
+{
+  "id": "openai-embeddings",
+  "name": "OpenAI Embeddings API Mock", 
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/v1/embeddings",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .*"
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "object": "list",
+      "data": [
+        {
+          "object": "embedding",
+          "index": 0,
+          "embedding": "{{arrayOf size=384 template='{{randomDecimal min=-1.0 max=1.0}}'}}}"
+        }
+      ],
+      "model": "{{jsonPath request.body '$.model'}}",
+      "usage": {
+        "prompt_tokens": 8,
+        "total_tokens": 8
+      }
+    },
+    "transformers": ["response-template"]
+  }
+}

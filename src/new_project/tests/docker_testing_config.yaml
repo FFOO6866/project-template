@@ -1,0 +1,365 @@
+# Docker Testing Configuration
+# Comprehensive configuration for Docker testing strategy
+
+# Test Infrastructure Configuration
+infrastructure:
+  # Test environment setup
+  test_env:
+    script_path: "tests/utils/test-env"
+    services:
+      core:
+        - postgresql
+        - redis
+        - chromadb
+      optional:
+        - neo4j
+        - elasticsearch
+        - minio
+        - adminer
+    
+  # Docker Compose files
+  compose_files:
+    test: "docker-compose.test.yml"
+    production: "docker-compose.yml"
+    nexus: "docker-compose.nexus.yml"
+    
+  # Service ports for testing
+  ports:
+    postgresql: 5432
+    redis: 6379
+    chromadb: 8001
+    neo4j: 7474
+    elasticsearch: 9200
+    minio: 9000
+    nexus_api: 8000
+    nexus_mcp: 3001
+    mcp_server: 3002
+
+# Tier 1: Unit Tests Configuration
+tier1_unit:
+  name: "Docker Validation Unit Tests"
+  timeout_per_test: 1  # seconds
+  requirements:
+    - "Speed: <1 second per test"
+    - "No external dependencies"
+    - "Mock external services"
+    - "Focus: Individual component functionality"
+  
+  test_files:
+    - "tests/unit/test_docker_validation.py"
+  
+  test_categories:
+    dockerfile_validation:
+      - "Dockerfile syntax and structure"
+      - "Security best practices"
+      - "Multi-stage build optimization"
+      - "Layer caching optimization"
+    
+    compose_validation:
+      - "Docker Compose YAML validation"
+      - "Service configuration security"
+      - "Network and volume configuration"
+      - "Health check configuration"
+    
+    image_validation:
+      - "Image metadata and labels"
+      - "Security scanning simulation"
+      - "Size optimization validation"
+      - "Build optimization"
+
+# Tier 2: Integration Tests Configuration  
+tier2_integration:
+  name: "Docker Services Integration Tests"
+  timeout_per_test: 5  # seconds
+  requirements:
+    - "Speed: <5 seconds per test"
+    - "Real Docker services from test-env"
+    - "NO MOCKING - use real services"
+    - "Focus: Component interactions"
+  
+  prerequisites:
+    - "Docker test infrastructure must be running"
+    - "All core services must be healthy"
+    - "Network connectivity between services"
+  
+  test_files:
+    - "tests/integration/test_docker_services_integration.py"
+  
+  test_categories:
+    service_connectivity:
+      - "Database connection testing"
+      - "Cache connection testing"
+      - "Inter-service communication"
+      - "Network discovery testing"
+    
+    data_persistence:
+      - "Volume persistence testing"
+      - "Data integrity across restarts"
+      - "Backup and recovery testing"
+    
+    api_integration:
+      - "API endpoint accessibility"
+      - "Database integration through APIs"
+      - "Cache integration through APIs"
+
+# Tier 3: End-to-End Tests Configuration
+tier3_e2e:
+  name: "Complete Docker Workflow E2E Tests"
+  timeout_per_test: 10  # seconds
+  requirements:
+    - "Speed: <10 seconds per test"
+    - "Complete real infrastructure stack"
+    - "NO MOCKING - complete scenarios"
+    - "Focus: Complete user workflows"
+  
+  prerequisites:
+    - "Full Docker stack must be running"
+    - "All services must be healthy"
+    - "End-to-end connectivity verified"
+  
+  test_files:
+    - "tests/e2e/test_docker_complete_workflows_e2e.py"
+    - "tests/e2e/test_docker_production_readiness_e2e.py"
+  
+  test_categories:
+    complete_workflows:
+      - "Full deployment testing"
+      - "User workflow simulation"
+      - "Data processing pipelines"
+      - "Multi-service coordination"
+    
+    production_readiness:
+      - "Health check validation"
+      - "Graceful shutdown testing"
+      - "Log aggregation verification"
+      - "Security configuration testing"
+      - "Monitoring and observability"
+
+# Performance Tests Configuration
+performance:
+  name: "Docker Performance Tests"
+  timeout_per_test: 30  # seconds
+  
+  performance_targets:
+    container_startup:
+      database: 30  # seconds
+      application: 60  # seconds
+      cache: 15  # seconds
+    
+    memory_usage:
+      application_containers: 512  # MB
+      database_containers: 2048  # MB
+      
+    response_times:
+      database_connection: 100  # ms
+      cache_operations: 10  # ms
+      api_endpoints: 500  # ms
+      health_checks: 1000  # ms
+    
+    network_latency:
+      inter_service: 100  # ms
+      external_access: 2000  # ms
+  
+  test_files:
+    - "tests/performance/test_docker_performance.py"
+  
+  test_categories:
+    startup_performance:
+      - "Container startup times"
+      - "Service readiness testing"
+      - "Resource initialization"
+    
+    runtime_performance:
+      - "Database query performance"
+      - "Cache operation performance"
+      - "API response times"
+      - "Network latency testing"
+    
+    resource_utilization:
+      - "Memory usage monitoring"
+      - "CPU utilization testing"
+      - "Disk I/O performance"
+      - "Network throughput"
+
+# Chaos Tests Configuration
+chaos:
+  name: "Docker Chaos Tests"
+  timeout_per_test: 60  # seconds
+  warning: "These tests intentionally break services"
+  
+  test_files:
+    - "tests/performance/test_docker_chaos.py"
+  
+  test_categories:
+    service_failures:
+      - "Database container failure/recovery"
+      - "Cache container failure/recovery"
+      - "Application container failure/recovery"
+      - "Network partition simulation"
+    
+    resource_exhaustion:
+      - "Connection exhaustion testing"
+      - "Memory pressure testing"
+      - "Disk space limitations"
+      - "CPU overload scenarios"
+    
+    graceful_degradation:
+      - "Partial service availability"
+      - "Fallback mechanism testing"
+      - "Error handling validation"
+      - "Recovery process verification"
+
+# CI/CD Integration Configuration
+ci_integration:
+  providers:
+    github_actions:
+      workflow_file: ".github/workflows/docker-tests.yml"
+      outputs:
+        - "test_status"
+        - "passed_suites"
+        - "failed_suites"
+        - "total_duration"
+      
+    jenkins:
+      pipeline_file: "Jenkinsfile.docker-tests"
+      artifacts:
+        - "docker_test_results.xml"
+        - "docker_test_report.html"
+      
+    gitlab_ci:
+      config_file: ".gitlab-ci.yml"
+      artifacts:
+        - "test-artifacts/docker_test_results.xml"
+        - "test-artifacts/coverage.xml"
+  
+  test_execution:
+    parallel_execution: true
+    fail_fast: true
+    retry_on_failure: 1
+    
+    default_test_types:
+      - "unit"
+      - "integration" 
+      - "e2e"
+    
+    optional_test_types:
+      - "performance"
+      - "chaos"
+      - "production-readiness"
+  
+  reporting:
+    formats:
+      - "json"
+      - "junit_xml"
+      - "html"
+      - "markdown"
+    
+    notifications:
+      on_failure: true
+      on_success: false
+      include_metrics: true
+
+# Test Execution Configuration
+execution:
+  # Default test suite execution order
+  default_order:
+    - "tier1_unit"
+    - "tier2_integration"
+    - "tier3_e2e"
+    - "performance"
+    - "production_readiness"
+  
+  # Parallel execution settings
+  parallel:
+    enabled: true
+    max_workers: 4
+    per_tier: false  # Run tiers sequentially, tests within tier in parallel
+  
+  # Retry configuration
+  retry:
+    enabled: true
+    max_attempts: 2
+    retry_on: ["timeout", "infrastructure_failure"]
+    delay_between_attempts: 30  # seconds
+  
+  # Reporting configuration
+  reporting:
+    save_logs: true
+    log_level: "INFO"
+    output_formats: ["json", "html"]
+    include_performance_metrics: true
+    include_resource_usage: true
+
+# Environment Configuration
+environments:
+  local_development:
+    compose_file: "docker-compose.yml"
+    test_data: "tests/fixtures/"
+    cleanup_after_tests: false
+    
+  ci_testing:
+    compose_file: "docker-compose.test.yml"
+    test_data: "tests/fixtures/"
+    cleanup_after_tests: true
+    
+  staging:
+    compose_file: "docker-compose.staging.yml"
+    test_data: "tests/fixtures/staging/"
+    cleanup_after_tests: true
+    
+  production_validation:
+    compose_file: "docker-compose.production.yml"
+    test_data: "tests/fixtures/production/"
+    cleanup_after_tests: false
+    read_only_tests: true
+
+# Quality Gates
+quality_gates:
+  unit_tests:
+    pass_rate_threshold: 100  # %
+    max_duration: 60  # seconds
+    
+  integration_tests:
+    pass_rate_threshold: 95  # %
+    max_duration: 300  # seconds
+    
+  e2e_tests:
+    pass_rate_threshold: 90  # %
+    max_duration: 600  # seconds
+    
+  performance_tests:
+    pass_rate_threshold: 80  # %
+    regression_threshold: 10  # % performance degradation
+    
+  chaos_tests:
+    pass_rate_threshold: 70  # %
+    recovery_time_threshold: 60  # seconds
+
+# Monitoring and Alerting
+monitoring:
+  metrics_collection:
+    enabled: true
+    retention_days: 30
+    metrics:
+      - "test_execution_time"
+      - "test_pass_rate"
+      - "infrastructure_startup_time"
+      - "resource_usage"
+      - "failure_rates"
+  
+  alerting:
+    enabled: true
+    channels:
+      - "slack"
+      - "email"
+    
+    conditions:
+      critical_failure:
+        unit_test_failure: true
+        integration_test_failure: true
+        infrastructure_failure: true
+      
+      warning:
+        performance_regression: true
+        chaos_test_failure: true
+        high_execution_time: true

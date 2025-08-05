@@ -20,3 +20,20 @@ Example Custom Nodes:
 - Integration adapters
 - Validation nodes
 """
+
+# Import safety compliance nodes for registration
+from .safety_compliance_nodes import (
+    SafetyRequirementFilterNode,
+    LockoutTagoutValidationNode,
+    NoviceUserSafetyValidationNode,
+    CriticalWarningIdentificationNode,
+    SafetyComplianceWorkflowNode
+)
+
+__all__ = [
+    "SafetyRequirementFilterNode",
+    "LockoutTagoutValidationNode", 
+    "NoviceUserSafetyValidationNode",
+    "CriticalWarningIdentificationNode",
+    "SafetyComplianceWorkflowNode"
+]

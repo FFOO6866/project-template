@@ -1,0 +1,46 @@
+{
+  "id": "openai-chat-completion",
+  "name": "OpenAI Chat Completions API Mock",
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/v1/chat/completions",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .*"
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": "chatcmpl-{{randomValue type='UUID'}}",
+      "object": "chat.completion",
+      "created": "{{now}}",
+      "model": "{{jsonPath request.body '$.model'}}",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "This is a mock response for testing. The user requested: {{jsonPath request.body '$.messages[0].content'}}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 50,
+        "completion_tokens": 25,
+        "total_tokens": 75
+      },
+      "system_fingerprint": "fp_test_mock"
+    },
+    "transformers": ["response-template"]
+  }
+}

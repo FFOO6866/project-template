@@ -1,0 +1,532 @@
+# Production-Grade MCP Server Stack
+# Complete containerized environment with all enterprise features
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with replication
+  postgres-primary:
+    image: postgres:15-alpine
+    hostname: postgres-primary
+    environment:
+      POSTGRES_DB: mcp_production
+      POSTGRES_USER: mcpuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure-password-change-in-production}
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replication-password}
+      PGUSER: mcpuser
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - ./deployment/docker/config/postgres/primary/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./deployment/docker/config/postgres/primary/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./deployment/docker/init-scripts/:/docker-entrypoint-initdb.d/
+    ports:
+      - "5432:5432"
+    command: [
+      "postgres",
+      "-c", "config_file=/etc/postgresql/postgresql.conf",
+      "-c", "hba_file=/etc/postgresql/pg_hba.conf"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpuser -d mcp_production"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # PostgreSQL Read Replica
+  postgres-replica:
+    image: postgres:15-alpine
+    hostname: postgres-replica
+    environment:
+      POSTGRES_DB: mcp_production
+      POSTGRES_USER: mcpuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure-password-change-in-production}
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replication-password}
+      POSTGRES_PRIMARY_HOST: postgres-primary
+      PGUSER: mcpuser
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./deployment/docker/config/postgres/replica/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./deployment/docker/config/postgres/replica/recovery.conf:/etc/postgresql/recovery.conf
+    ports:
+      - "5433:5432"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    command: [
+      "postgres",
+      "-c", "config_file=/etc/postgresql/postgresql.conf"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpuser -d mcp_production"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Redis Cluster for caching and session management
+  redis-master:
+    image: redis:7-alpine
+    hostname: redis-master
+    command: [
+      "redis-server",
+      "--appendonly", "yes",
+      "--maxmemory", "512mb",
+      "--maxmemory-policy", "allkeys-lru",
+      "--save", "60", "1000",
+      "--tcp-keepalive", "60",
+      "--timeout", "300"
+    ]
+    volumes:
+      - redis_master_data:/data
+      - ./deployment/docker/config/redis/redis.conf:/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  redis-replica:
+    image: redis:7-alpine
+    hostname: redis-replica
+    command: [
+      "redis-server",
+      "--replicaof", "redis-master", "6379",
+      "--appendonly", "yes",
+      "--maxmemory", "512mb",
+      "--maxmemory-policy", "allkeys-lru"
+    ]
+    volumes:
+      - redis_replica_data:/data
+    ports:
+      - "6380:6379"
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # RabbitMQ for message queuing
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-mcpuser}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-secure-rabbitmq-password}
+      RABBITMQ_DEFAULT_VHOST: mcp_production
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./deployment/docker/config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./deployment/docker/config/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    hostname: jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # HTTP collector
+      - "14250:14250"  # gRPC collector
+      - "9411:9411"    # Zipkin collector
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    hostname: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./deployment/docker/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./deployment/docker/config/prometheus/rules/:/etc/prometheus/rules/
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    hostname: grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deployment/docker/config/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./deployment/docker/config/grafana/dashboards/:/var/lib/grafana/dashboards/
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # MCP Server - Primary Instance
+  mcp-server-1:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile.mcp-production
+      target: production
+    hostname: mcp-server-1
+    environment:
+      # Server configuration
+      MCP_ENVIRONMENT: production
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 3001
+      MCP_METRICS_PORT: 9090
+      MCP_MANAGEMENT_PORT: 3002
+      
+      # Authentication
+      MCP_AUTH_TYPE: jwt
+      MCP_JWT_SECRET: ${MCP_JWT_SECRET:-your-production-jwt-secret-change-this}
+      MCP_JWT_ALGORITHM: HS256
+      MCP_JWT_EXPIRY: 3600
+      
+      # Database connections
+      DATABASE_URL: postgresql://mcpuser:${POSTGRES_PASSWORD:-secure-password-change-in-production}@postgres-primary:5432/mcp_production
+      DATABASE_READ_URL: postgresql://mcpuser:${POSTGRES_PASSWORD:-secure-password-change-in-production}@postgres-replica:5432/mcp_production
+      REDIS_URL: redis://redis-master:6379/0
+      
+      # Message queuing
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-mcpuser}:${RABBITMQ_PASSWORD:-secure-rabbitmq-password}@rabbitmq:5672/mcp_production
+      
+      # Observability
+      JAEGER_ENDPOINT: jaeger:14268
+      PROMETHEUS_GATEWAY: prometheus:9090
+      LOG_LEVEL: INFO
+      
+      # Performance
+      MCP_WORKER_THREADS: 4
+      MCP_CONNECTION_POOL_SIZE: 20
+      MCP_AGENT_CONCURRENCY_LIMIT: 100
+      MCP_REQUEST_QUEUE_SIZE: 1000
+      MCP_REQUEST_TIMEOUT: 30
+      MCP_RATE_LIMIT: 1000
+      
+      # Features
+      MCP_ENABLE_CACHE: "true"
+      MCP_ENABLE_METRICS: "true"
+      MCP_ENABLE_TRACING: "true"
+      MCP_SERVICE_MESH: "true"
+      
+      # Security
+      MCP_CORS_ORIGINS: "*"
+      MCP_TRUSTED_HOSTS: "*"
+      
+      # Container-specific
+      HOSTNAME: mcp-server-1
+      INSTANCE_ID: mcp-server-1-${COMPOSE_PROJECT_NAME:-mcp}
+    volumes:
+      - mcp_server_1_data:/app/data
+      - mcp_logs:/app/logs
+    ports:
+      - "3001:3001"
+      - "9091:9090"
+      - "3102:3002"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/app/health_check.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # MCP Server - Secondary Instance (Load Balancing)
+  mcp-server-2:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile.mcp-production
+      target: production
+    hostname: mcp-server-2
+    environment:
+      # Same as mcp-server-1 but different instance ID
+      MCP_ENVIRONMENT: production
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 3001
+      MCP_METRICS_PORT: 9090
+      MCP_MANAGEMENT_PORT: 3002
+      MCP_AUTH_TYPE: jwt
+      MCP_JWT_SECRET: ${MCP_JWT_SECRET:-your-production-jwt-secret-change-this}
+      DATABASE_URL: postgresql://mcpuser:${POSTGRES_PASSWORD:-secure-password-change-in-production}@postgres-primary:5432/mcp_production
+      DATABASE_READ_URL: postgresql://mcpuser:${POSTGRES_PASSWORD:-secure-password-change-in-production}@postgres-replica:5432/mcp_production
+      REDIS_URL: redis://redis-master:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-mcpuser}:${RABBITMQ_PASSWORD:-secure-rabbitmq-password}@rabbitmq:5672/mcp_production
+      JAEGER_ENDPOINT: jaeger:14268
+      PROMETHEUS_GATEWAY: prometheus:9090
+      LOG_LEVEL: INFO
+      MCP_WORKER_THREADS: 4
+      MCP_CONNECTION_POOL_SIZE: 20
+      MCP_ENABLE_CACHE: "true"
+      MCP_ENABLE_METRICS: "true"
+      MCP_ENABLE_TRACING: "true"
+      MCP_SERVICE_MESH: "true"
+      HOSTNAME: mcp-server-2
+      INSTANCE_ID: mcp-server-2-${COMPOSE_PROJECT_NAME:-mcp}
+    volumes:
+      - mcp_server_2_data:/app/data
+      - mcp_logs:/app/logs
+    ports:
+      - "3011:3001"
+      - "9092:9090"
+      - "3112:3002"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mcp-server-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/app/health_check.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # HAProxy Load Balancer
+  load-balancer:
+    image: haproxy:2.8-alpine
+    hostname: load-balancer
+    volumes:
+      - ./deployment/docker/config/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8404:8404"  # HAProxy stats
+    depends_on:
+      mcp-server-1:
+        condition: service_healthy
+      mcp-server-2:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # Nginx for static assets and SSL termination
+  nginx:
+    image: nginx:alpine
+    hostname: nginx
+    volumes:
+      - ./deployment/docker/config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deployment/docker/config/nginx/ssl/:/etc/nginx/ssl/:ro
+      - ./deployment/docker/static/:/usr/share/nginx/html/:ro
+    ports:
+      - "8080:80"
+      - "8443:443"
+    depends_on:
+      - load-balancer
+    restart: unless-stopped
+    networks:
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+# Volumes for persistent data
+volumes:
+  postgres_primary_data:
+    driver: local
+  postgres_replica_data:
+    driver: local
+  redis_master_data:
+    driver: local
+  redis_replica_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  mcp_server_1_data:
+    driver: local
+  mcp_server_2_data:
+    driver: local
+  mcp_logs:
+    driver: local
+
+# Networks
+networks:
+  mcp_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: mcp-production
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.driver.mtu: 1500

@@ -1,0 +1,10 @@
+# Test Data Generation Dependencies
+faker==19.6.2
+numpy==1.24.3
+psycopg2-binary==2.9.7
+neo4j==5.12.0
+chromadb==0.4.10
+redis==4.6.0
+requests==2.31.0
+asyncpg==0.28.0
+py2neo==2021.2.3

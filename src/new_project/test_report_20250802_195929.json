@@ -1,0 +1,67 @@
+{
+  "execution_summary": {
+    "start_time": 1754135924.1265075,
+    "total_execution_time": 45.383196115493774,
+    "total_tests_run": 0,
+    "total_tests_passed": 0,
+    "total_tests_failed": 0,
+    "success_rate": 0.0
+  },
+  "test_results": {
+    "environment": {
+      "python_available": true,
+      "pytest_available": true,
+      "docker_available": false,
+      "kailash_sdk_available": true,
+      "test_dependencies": [],
+      "missing_dependencies": [
+        "docker"
+      ],
+      "docker_services": {}
+    },
+    "unit": {
+      "tier": "unit",
+      "description": "Unit tests (Tier 1)",
+      "status": "passed",
+      "return_code": 0,
+      "execution_time": 10.690938472747803,
+      "output": "\u001b[1m============================= test session starts =============================\u001b[0m\nplatform win32 -- Python 3.11.9, pytest-8.4.1, pluggy-1.6.0 -- C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\nconfigfile: pytest.ini\nplugins: anyio-4.9.0, Faker-37.5.3, asyncio-1.1.0, cov-6.2.1, forked-1.6.0, mock-3.14.1, split-0.10.0, timeout-2.4.0, xdist-3.8.0\nasyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ntimeout: 10.0s\ntimeout method: thread\ntimeout func_only: False\n\u001b[1mcollecting ... \u001b[0mcollected 404 items / 402 deselected / 2 selected\n\ntests/unit/test_test_infrastructure.py::TestPerformanceRequirements::test_unit_test_execution_time \u001b[32mPASSED\u001b[0m\u001b[33m [ 50%]\u001b[0m\ntests/unit/test_test_infrastructure.py::TestPerformanceRequirements::test_data_generation_performance \u001b[32mPASSED\u001b[0m\u001b[33m [100%]\u001b[0m\n\n\u001b[33m============================== warnings summary ===============================\u001b[0m\ntests\\unit\\test_test_infrastructure.py:674\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_test_infrastructure.py:674: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.performance\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n\u001b[33m================ \u001b[32m2 passed\u001b[0m, \u001b[33m\u001b[1m402 deselected\u001b[0m, \u001b[33m\u001b[1m1 warning\u001b[0m\u001b[33m in 7.49s\u001b[0m\u001b[33m =================\u001b[0m\n",
+      "errors": "",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "tests_skipped": 0
+    },
+    "integration": {
+      "tier": "integration",
+      "description": "Integration tests (Tier 2)",
+      "status": "failed",
+      "return_code": 2,
+      "execution_time": 6.455268383026123,
+      "output": "\u001b[1m============================= test session starts =============================\u001b[0m\nplatform win32 -- Python 3.11.9, pytest-8.4.1, pluggy-1.6.0 -- C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\nconfigfile: pytest.ini\nplugins: anyio-4.9.0, Faker-37.5.3, asyncio-1.1.0, cov-6.2.1, forked-1.6.0, mock-3.14.1, split-0.10.0, timeout-2.4.0, xdist-3.8.0\nasyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ntimeout: 30.0s\ntimeout method: thread\ntimeout func_only: False\n\u001b[1mcollecting ... \u001b[0mcollected 10 items / 3 errors / 10 deselected / 1 skipped / 0 selected\n\n=================================== ERRORS ====================================\n\u001b[31m\u001b[1m________ ERROR collecting tests/integration/test_neo4j_integration.py _________\u001b[0m\n\u001b[31mImportError while importing test module 'C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\integration\\test_neo4j_integration.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\nC:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\integration\\test_neo4j_integration.py:27: in <module>\n    import neo4j\nE   ModuleNotFoundError: No module named 'neo4j'\u001b[0m\n\u001b[31m\u001b[1m____ ERROR collecting tests/integration/test_sdk_compliance_integration.py ____\u001b[0m\n\u001b[31mImportError while importing test module 'C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\integration\\test_sdk_compliance_integration.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\nC:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\integration\\test_sdk_compliance_integration.py:37: in <module>\n    from kailash.nodes.base import BaseNode, SecureGovernedNode\nE   ImportError: cannot import name 'BaseNode' from 'kailash.nodes.base' (C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\kailash\\nodes\\base.py)\u001b[0m\n\u001b[31m\u001b[1m_ ERROR collecting tests/integration/test_test_infrastructure_integration.py __\u001b[0m\n\u001b[31mImportError while importing test module 'C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\integration\\test_test_infrastructure_integration.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\nC:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\integration\\test_test_infrastructure_integration.py:33: in <module>\n    import chromadb\nE   ModuleNotFoundError: No module named 'chromadb'\u001b[0m\n\u001b[36m\u001b[1m=========================== short test summary info ===========================\u001b[0m\n\u001b[31mERROR\u001b[0m tests/integration/test_neo4j_integration.py\n\u001b[31mERROR\u001b[0m tests/integration/test_sdk_compliance_integration.py\n\u001b[31mERROR\u001b[0m tests/integration/test_test_infrastructure_integration.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!\n\u001b[31m================= \u001b[33m1 skipped\u001b[0m, \u001b[33m10 deselected\u001b[0m, \u001b[31m\u001b[1m3 errors\u001b[0m\u001b[31m in 4.52s\u001b[0m\u001b[31m =================\u001b[0m\n",
+      "errors": "",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "tests_skipped": 0
+    },
+    "e2e": {
+      "tier": "e2e",
+      "description": "End-to-end tests (Tier 3)",
+      "status": "failed",
+      "return_code": 2,
+      "execution_time": 6.218855619430542,
+      "output": "\u001b[1m============================= test session starts =============================\u001b[0m\nplatform win32 -- Python 3.11.9, pytest-8.4.1, pluggy-1.6.0 -- C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\python.exe\ncachedir: .pytest_cache\nrootdir: C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\nconfigfile: pytest.ini\nplugins: anyio-4.9.0, Faker-37.5.3, asyncio-1.1.0, cov-6.2.1, forked-1.6.0, mock-3.14.1, split-0.10.0, timeout-2.4.0, xdist-3.8.0\nasyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ntimeout: 60.0s\ntimeout method: thread\ntimeout func_only: False\n\u001b[1mcollecting ... \u001b[0mcollected 17 items / 1 error / 4 deselected / 1 skipped / 13 selected\n\n=================================== ERRORS ====================================\n\u001b[31m\u001b[1m____________ ERROR collecting tests/e2e/test_sdk_compliance_e2e.py ____________\u001b[0m\n\u001b[31mImportError while importing test module 'C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\e2e\\test_sdk_compliance_e2e.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\nC:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\e2e\\test_sdk_compliance_e2e.py:41: in <module>\n    from kailash.nodes.base import BaseNode, SecureGovernedNode\nE   ImportError: cannot import name 'BaseNode' from 'kailash.nodes.base' (C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\kailash\\nodes\\base.py)\u001b[0m\n\u001b[33m============================== warnings summary ===============================\u001b[0m\ntests\\e2e\\test_test_infrastructure_e2e.py:238\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\e2e\\test_test_infrastructure_e2e.py:238: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.performance\n\ntests\\e2e\\test_test_infrastructure_e2e.py:367\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\e2e\\test_test_infrastructure_e2e.py:367: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.performance\n\ntests\\e2e\\test_test_infrastructure_e2e.py:462\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\e2e\\test_test_infrastructure_e2e.py:462: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.performance\n\ntests\\e2e\\test_test_infrastructure_e2e.py:600\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\e2e\\test_test_infrastructure_e2e.py:600: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.performance\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n\u001b[36m\u001b[1m=========================== short test summary info ===========================\u001b[0m\n\u001b[31mERROR\u001b[0m tests/e2e/test_sdk_compliance_e2e.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n\u001b[31m============ \u001b[33m1 skipped\u001b[0m, \u001b[33m4 deselected\u001b[0m, \u001b[33m4 warnings\u001b[0m, \u001b[31m\u001b[1m1 error\u001b[0m\u001b[31m in 4.40s\u001b[0m\u001b[31m ============\u001b[0m\n",
+      "errors": "",
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "tests_skipped": 0
+    }
+  },
+  "environment_info": {
+    "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "working_directory": "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project",
+    "test_directory": "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project"
+  }
+}

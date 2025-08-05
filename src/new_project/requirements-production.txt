@@ -1,0 +1,55 @@
+# Production requirements for Nexus Platform
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-jwt==4.0.0
+PyJWT==2.8.0
+
+# Database & Caching
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+sqlalchemy==2.0.23
+
+# HTTP & Networking
+httpx==0.25.2
+aiohttp==3.9.1
+requests==2.31.0
+
+# WebSocket support
+websocket-client==1.6.4
+
+# Data processing
+pandas==2.1.4
+numpy==1.25.2
+pydantic==2.5.0
+
+# Monitoring & Logging
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Performance
+gunicorn==21.2.0
+gevent==23.9.1
+
+# Development & Testing (for health checks)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Additional utilities
+python-dotenv==1.0.0
+click==8.1.7
+rich==13.7.0
+typer==0.9.0
+
+# MCP Server dependencies
+fastmcp==0.1.0
+psutil==5.9.6
+msgpack==1.0.7

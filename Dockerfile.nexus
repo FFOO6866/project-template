@@ -1,0 +1,183 @@
+# Multi-stage Dockerfile for Nexus Multi-Channel Platform
+# Optimized for production deployment with security and performance
+
+# Build stage
+FROM python:3.11-slim as builder
+
+# Build arguments
+ARG BUILD_VERSION=latest
+ARG BUILD_DATE
+ARG BUILD_REVISION
+
+# Set build-time environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create build directory
+WORKDIR /build
+
+# Copy requirements first for better caching
+COPY requirements*.txt ./
+COPY src/new_project/requirements-nexus.txt ./requirements-nexus.txt
+
+# Install Python dependencies
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements-nexus.txt && \
+    pip install gunicorn uvicorn[standard]
+
+# Copy source code
+COPY . .
+
+# Build wheel package
+RUN python setup.py bdist_wheel
+
+# Production stage
+FROM python:3.11-slim as production
+
+# Metadata labels
+LABEL maintainer="Nexus Platform Team" \
+      version="${BUILD_VERSION}" \
+      build-date="${BUILD_DATE}" \
+      build-revision="${BUILD_REVISION}" \
+      description="Nexus Multi-Channel Platform (API + CLI + MCP)"
+
+# Set production environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONOPTIMIZE=1 \
+    PATH="/app/.local/bin:$PATH" \
+    NEXUS_HOME=/app \
+    NEXUS_CONFIG_DIR=/app/config \
+    NEXUS_DATA_DIR=/app/data \
+    NEXUS_LOG_DIR=/app/logs
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create nexus user for security
+RUN groupadd -g 1000 nexus && \
+    useradd -u 1000 -g nexus -s /bin/bash -m nexus
+
+# Create application directory structure
+RUN mkdir -p /app/{config,data,logs,cache,uploads,temp} && \
+    chown -R nexus:nexus /app
+
+# Switch to nexus user
+USER nexus
+WORKDIR /app
+
+# Copy Python packages from builder
+COPY --from=builder --chown=nexus:nexus /usr/local/lib/python3.11/site-packages /home/nexus/.local/lib/python3.11/site-packages
+COPY --from=builder --chown=nexus:nexus /usr/local/bin /home/nexus/.local/bin
+
+# Copy application code
+COPY --chown=nexus:nexus src/new_project/ ./src/
+COPY --chown=nexus:nexus *.py ./
+COPY --chown=nexus:nexus config/ ./config/
+
+# Create Nexus startup script
+RUN cat > ./start-nexus.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🚀 Starting Nexus Multi-Channel Platform..."
+
+# Environment validation
+echo "🔍 Validating environment..."
+python -c "
+import os, sys
+required_vars = ['DATABASE_URL', 'REDIS_URL', 'NEXUS_JWT_SECRET']
+missing = [var for var in required_vars if not os.getenv(var)]
+if missing:
+    print(f'❌ Missing required environment variables: {missing}')
+    sys.exit(1)
+print('✅ Environment validation passed')
+"
+
+# Database migration
+echo "🗄️ Running database migrations..."
+python -c "
+try:
+    from src.dataflow_classification_models import initialize_database
+    initialize_database()
+    print('✅ Database initialization completed')
+except Exception as e:
+    print(f'⚠️  Database initialization warning: {e}')
+"
+
+# Start services based on configuration
+if [ "${NEXUS_ENABLE_API:-true}" = "true" ]; then
+    echo "🌐 Starting API server on port ${NEXUS_API_PORT:-8000}..."
+fi
+
+if [ "${NEXUS_ENABLE_MCP:-true}" = "true" ]; then
+    echo "🤖 Starting MCP server on port ${NEXUS_MCP_PORT:-3001}..."
+fi
+
+# Start the main Nexus platform
+echo "🎯 Launching Nexus platform..."
+exec python start_nexus_platform.py
+EOF
+
+# Make startup script executable
+RUN chmod +x ./start-nexus.sh
+
+# Create health check script
+RUN cat > ./health-check.sh << 'EOF'
+#!/bin/bash
+set -e
+
+# Check API server
+if [ "${NEXUS_ENABLE_API:-true}" = "true" ]; then
+    curl -f http://localhost:${NEXUS_API_PORT:-8000}/api/health || exit 1
+fi
+
+# Check MCP server
+if [ "${NEXUS_ENABLE_MCP:-true}" = "true" ]; then
+    curl -f http://localhost:${NEXUS_MCP_PORT:-3001}/health || exit 1
+fi
+
+echo "✅ All services healthy"
+EOF
+
+RUN chmod +x ./health-check.sh
+
+# Expose ports
+EXPOSE 8000 3001 9090 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD ./health-check.sh
+
+# Default command
+CMD ["./start-nexus.sh"]
+
+# Alternative commands for different modes
+# docker run ... api-only    -> Only start API server
+# docker run ... mcp-only    -> Only start MCP server  
+# docker run ... cli         -> Interactive CLI mode
+# docker run ... health      -> Health check mode
+
+ENTRYPOINT ["bash", "-c", "\
+case \"$1\" in \
+  api-only) export NEXUS_ENABLE_MCP=false; exec ./start-nexus.sh ;; \
+  mcp-only) export NEXUS_ENABLE_API=false; exec ./start-nexus.sh ;; \
+  cli) exec python -m nexus.cli \"${@:2}\" ;; \
+  health) exec ./health-check.sh ;; \
+  *) exec ./start-nexus.sh \"$@\" ;; \
+esac"]

@@ -1,0 +1,174 @@
+# AI-Powered Sales Assistant Requirements
+# Core dependencies for the comprehensive MCP-based sales assistant system
+
+# === CORE KAILASH & NEXUS ===
+kailash>=0.9.6
+kailash[dataflow]>=0.9.6
+kailash[nexus]>=0.9.6
+
+# === MCP INTEGRATION ===
+mcp>=1.0.0
+model-context-protocol>=0.5.0
+fastmcp>=0.1.0
+
+# === WEB FRAMEWORK ===
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+starlette>=0.27.0
+
+# === AI & ML LIBRARIES ===
+openai>=1.3.0
+anthropic>=0.7.0
+sentence-transformers>=2.2.2
+transformers>=4.35.0
+torch>=2.1.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# === DOCUMENT PROCESSING ===
+PyPDF2>=3.0.1
+python-docx>=1.1.0
+pandas>=2.1.0
+openpyxl>=3.1.2
+xlrd>=2.0.1
+Pillow>=10.0.0
+pytesseract>=0.3.10
+magic>=0.4.27
+filetype>=1.2.0
+
+# === VECTOR DATABASE & RAG ===
+chromadb>=0.4.15
+faiss-cpu>=1.7.4
+pinecone-client>=2.2.4
+weaviate-client>=3.25.0
+
+# === DATABASE & ORM ===
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9
+alembic>=1.12.1
+aiopg>=1.4.0
+asyncpg>=0.29.0
+
+# === CACHING & REDIS ===
+redis>=5.0.1
+aioredis>=2.0.1
+cachetools>=5.3.2
+
+# === AUTHENTICATION & SECURITY ===
+PyJWT>=2.8.0
+cryptography>=41.0.7
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
+# === DATA VALIDATION ===
+pydantic>=2.5.0
+marshmallow>=3.20.1
+cerberus>=1.3.5
+jsonschema>=4.19.2
+
+# === HTTP CLIENTS ===
+httpx>=0.25.0
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# === ASYNC & CONCURRENCY ===
+asyncio>=3.4.3
+aiofiles>=23.2.1
+anyio>=4.0.0
+
+# === MONITORING & LOGGING ===
+prometheus-client>=0.19.0
+structlog>=23.2.0
+sentry-sdk[fastapi]>=1.38.0
+loguru>=0.7.2
+
+# === CONFIGURATION ===
+python-dotenv>=1.0.0
+click>=8.1.7
+typer>=0.9.0
+pyyaml>=6.0.1
+toml>=0.10.2
+
+# === DATE & TIME ===
+python-dateutil>=2.8.2
+pytz>=2023.3
+arrow>=1.3.0
+
+# === UTILITIES ===
+more-itertools>=10.1.0
+tqdm>=4.66.1
+rich>=13.7.0
+tabulate>=0.9.0
+
+# === TESTING (for development) ===
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+pytest-mock>=3.12.0
+pytest-cov>=4.1.0
+factory-boy>=3.3.0
+faker>=20.1.0
+
+# === CODE QUALITY (for development) ===
+black>=23.11.0
+flake8>=6.1.0
+mypy>=1.7.1
+isort>=5.12.0
+pre-commit>=3.5.0
+
+# === PERFORMANCE ===
+orjson>=3.9.10
+ujson>=5.8.0
+msgpack>=1.0.7
+
+# === ADDITIONAL ML/AI TOOLS ===
+langchain>=0.0.340
+langchain-openai>=0.0.2
+langchain-community>=0.0.9
+llama-index>=0.9.13
+chainlit>=0.7.700
+streamlit>=1.28.0
+
+# === BUSINESS INTELLIGENCE ===
+plotly>=5.17.0
+matplotlib>=3.8.2
+seaborn>=0.13.0
+bokeh>=3.3.2
+
+# === EXCEL & OFFICE INTEGRATION ===
+xlwings>=0.31.0
+win32com; sys_platform == "win32"
+pywin32; sys_platform == "win32"
+
+# === EMAIL & NOTIFICATIONS ===
+smtplib2>=0.2.1
+sendgrid>=6.10.0
+twilio>=8.10.0
+
+# === WORKFLOW & TASK PROCESSING ===
+celery>=5.3.4
+rq>=1.15.1
+kombu>=5.3.4
+
+# === API DOCUMENTATION ===
+fastapi-users>=12.1.2
+fastapi-pagination>=0.12.14
+fastapi-cache2>=0.2.1
+
+# === DEPLOYMENT & PRODUCTION ===
+gunicorn>=21.2.0
+gevent>=23.9.1
+whitenoise>=6.6.0
+
+# === SYSTEM & OS ===
+psutil>=5.9.6
+watchdog>=3.0.0
+apscheduler>=3.10.4
+
+# === NETWORKING ===
+websocket-client>=1.6.4
+sseclient-py>=1.8.0
+
+# === COMPATIBILITY ===
+typing-extensions>=4.8.0
+backports.zoneinfo>=0.2.1; python_version < "3.9"

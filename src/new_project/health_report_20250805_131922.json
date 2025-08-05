@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-08-05T05:19:22.243527",
+  "overall_status": "degraded",
+  "health_percentage": 66.66666666666666,
+  "services": {
+    "database": {
+      "service": "database",
+      "status": "healthy",
+      "details": {
+        "product_count": 0,
+        "connection": "successful",
+        "response_time_ms": "fast"
+      },
+      "timestamp": "2025-08-05T05:19:21.866748"
+    },
+    "cache": {
+      "service": "cache",
+      "status": "unknown",
+      "details": {},
+      "timestamp": "2025-08-05T05:19:22.124963"
+    },
+    "workflow_engine": {
+      "service": "workflow_engine",
+      "status": "healthy",
+      "details": {
+        "execution_time_ms": 118.56,
+        "run_id": "b8eaf049-ef2e-4b7a-ad35-3ece60cc481d",
+        "test_result": "unknown"
+      },
+      "timestamp": "2025-08-05T05:19:22.243527"
+    }
+  },
+  "summary": {
+    "total_services": 3,
+    "healthy_services": 2,
+    "unhealthy_services": 1,
+    "report_generation_time_ms": 468.93
+  }
+}

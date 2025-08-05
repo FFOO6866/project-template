@@ -1,0 +1,29 @@
+{
+  "validation_summary": {
+    "total_files_checked": 143,
+    "total_violations": 0,
+    "compliance_score": 90,
+    "status": "COMPLIANT"
+  },
+  "issue_breakdown": {
+    "errors": 1,
+    "warnings": 0,
+    "info": 0
+  },
+  "detailed_results": {
+    "errors": [
+      {
+        "file": "fix_sdk_imports.py",
+        "line": 99,
+        "type": "syntax_error",
+        "description": "Python syntax error: unterminated string literal (detected at line 99) (fix_sdk_imports.py, line 99)",
+        "severity": "error"
+      }
+    ],
+    "warnings": [],
+    "info": []
+  },
+  "recommendations": [
+    "[CRITICAL] Fix all NodeParameter errors before deployment"
+  ]
+}

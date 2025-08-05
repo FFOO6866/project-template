@@ -1,0 +1,480 @@
+# Nexus Multi-Channel Platform - Production Docker Deployment
+# Comprehensive Docker infrastructure for Nexus API + CLI + MCP deployment
+# Optimized for production workloads with monitoring and security
+
+version: '3.8'
+
+services:
+  # Nexus Multi-Channel Platform
+  nexus-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile.nexus
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-latest}
+        BUILD_DATE: ${BUILD_DATE}
+        BUILD_REVISION: ${BUILD_REVISION}
+    container_name: ${PROJECT_NAME:-nexus}-platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    environment:
+      # Core Nexus Configuration
+      - NEXUS_ENABLE_API=true
+      - NEXUS_ENABLE_CLI=true
+      - NEXUS_ENABLE_MCP=true
+      - NEXUS_API_PORT=8000
+      - NEXUS_MCP_PORT=3001
+      - NEXUS_ENVIRONMENT=production
+      
+      # Multi-Channel Authentication
+      - NEXUS_JWT_SECRET=${NEXUS_JWT_SECRET}
+      - NEXUS_API_KEY=${NEXUS_API_KEY}
+      - NEXUS_SESSION_TIMEOUT=3600
+      - NEXUS_ENABLE_AUTH=true
+      
+      # Database Configuration
+      - DATABASE_URL=postgresql://nexus_user:${POSTGRES_PASSWORD}@postgres:5432/nexus_db
+      - DATAFLOW_DATABASE_URL=postgresql://nexus_user:${POSTGRES_PASSWORD}@postgres:5432/nexus_db
+      - REDIS_URL=redis://redis:6379/0
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      
+      # Vector Database Configuration
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - CHROMA_CLIENT_URL=http://chromadb:8000
+      
+      # AI Services Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      - CLASSIFICATION_CONFIDENCE_THRESHOLD=0.8
+      
+      # Performance Configuration
+      - NEXUS_WORKERS=4
+      - NEXUS_TIMEOUT=300
+      - CACHE_TTL=300
+      - MAX_CONNECTIONS=100
+      - POOL_SIZE=20
+      
+      # Security Configuration
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - ENABLE_RATE_LIMITING=true
+      - RATE_LIMIT_PER_MINUTE=100
+      - SECURITY_HEADERS_ENABLED=true
+      
+      # Monitoring Configuration
+      - ENABLE_METRICS=true
+      - METRICS_PORT=9090
+      - HEALTH_CHECK_INTERVAL=30
+      - LOG_LEVEL=info
+      - ENABLE_STRUCTURED_LOGGING=true
+      
+      # Production Optimization
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - WORKERS_PER_CORE=1
+      - MAX_WORKER_CONNECTIONS=1000
+      - WORKER_CLASS=uvicorn.workers.UvicornWorker
+      
+    ports:
+      - "8000:8000"   # Nexus API Server
+      - "3001:3001"   # Nexus MCP Server
+      - "9090:9090"   # Metrics/Prometheus
+      - "8080:8080"   # Health Dashboard
+    volumes:
+      - nexus_logs:/app/logs
+      - nexus_data:/app/data
+      - nexus_cache:/app/cache
+      - nexus_uploads:/app/uploads
+      - nexus_config:/app/config
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexus-api.rule=Host(`api.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.nexus-api.tls=true"
+      - "traefik.http.routers.nexus-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.nexus-api.loadbalancer.server.port=8000"
+      - "traefik.http.routers.nexus-mcp.rule=Host(`mcp.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.nexus-mcp.tls=true"
+      - "traefik.http.services.nexus-mcp.loadbalancer.server.port=3001"
+
+  # PostgreSQL with Vector Support
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: ${PROJECT_NAME:-nexus}-postgres
+    environment:
+      POSTGRES_DB: nexus_db
+      POSTGRES_USER: nexus_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts/nexus-init.sql:/docker-entrypoint-initdb.d/01-nexus-init.sql
+      - ./init-scripts/extensions.sql:/docker-entrypoint-initdb.d/02-extensions.sql
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus_user -d nexus_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=32MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=8MB
+      -c min_wal_size=2GB
+      -c max_wal_size=8GB
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: ${PROJECT_NAME:-nexus}-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --appendonly yes
+      --appendfsync everysec
+
+  # Neo4j Knowledge Graph
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: ${PROJECT_NAME:-nexus}-neo4j
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc","graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_memory_heap_initial__size: 1G
+      NEO4J_dbms_memory_heap_max__size: 2G
+      NEO4J_dbms_memory_pagecache_size: 1G
+      NEO4J_dbms_connector_bolt_advertised__address: localhost:7687
+      NEO4J_dbms_connector_http_advertised__address: localhost:7474
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASSWORD} 'RETURN 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: ${PROJECT_NAME:-nexus}-chromadb
+    environment:
+      CHROMA_SERVER_HOST: 0.0.0.0
+      CHROMA_SERVER_HTTP_PORT: 8000
+      CHROMA_SERVER_CORS_ALLOW_ORIGINS: '["*"]'
+      ANONYMIZED_TELEMETRY: false
+      IS_PERSISTENT: true
+      PERSIST_DIRECTORY: /chroma/chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: ${PROJECT_NAME:-nexus}-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_CONSOLE_ADDRESS: :9001
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: server /data --console-address ":9001"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Reverse Proxy (Traefik)
+  traefik:
+    image: traefik:v3.0
+    container_name: ${PROJECT_NAME:-nexus}-traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.debug=false"
+      - "--log.level=INFO"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+      - "--global.sendAnonymousUsage=false"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ${PROJECT_NAME:-nexus}-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./config/prometheus-nexus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    depends_on:
+      - nexus-platform
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ${PROJECT_NAME:-nexus}-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_FEATURE_TOGGLES_ENABLE=newNavigation
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    ports:
+      - "3000:3000"
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Log Aggregation (Loki)
+  loki:
+    image: grafana/loki:latest
+    container_name: ${PROJECT_NAME:-nexus}-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Log Collection (Promtail)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: ${PROJECT_NAME:-nexus}-promtail
+    volumes:
+      - ./config/promtail.yml:/etc/promtail/config.yml
+      - /var/log:/var/log:ro
+      - nexus_logs:/app/logs:ro
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+volumes:
+  # Database volumes
+  postgres_data:
+  redis_data:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_plugins:
+  chromadb_data:
+  minio_data:
+  
+  # Application volumes
+  nexus_logs:
+  nexus_data:
+  nexus_cache:
+  nexus_uploads:
+  nexus_config:
+  
+  # Monitoring volumes
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  
+  # Security volumes
+  traefik_letsencrypt:
+
+networks:
+  nexus-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+          gateway: 172.22.0.1

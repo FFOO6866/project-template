@@ -1,0 +1,261 @@
+{
+  "validation_summary": {
+    "timestamp": "2025-08-04T00:38:09.593518",
+    "validation_duration_minutes": 1.74640435,
+    "total_requirements_validated": 8,
+    "requirements_verified": 2,
+    "requirements_failed": 6
+  },
+  "production_readiness_analysis": {
+    "claimed_production_readiness": "75%",
+    "actual_production_readiness": "25.0%",
+    "claims_vs_reality_gap": "50.0%",
+    "validation_methodology": "independent_objective_measurement",
+    "measurement_standards": "no_mocking_real_services_only"
+  },
+  "validation_results_by_category": {
+    "infrastructure": [
+      {
+        "requirement_id": "REQ-INFRA-001",
+        "description": "Service Accessibility Validation",
+        "claimed_status": "All services operational",
+        "actual_status": "0/4 services accessible (0.0%)",
+        "verified": false,
+        "measurement_method": "external_health_checks",
+        "validation_timestamp": "2025-08-04 00:36:25.157613",
+        "evidence": {
+          "service_results": {
+            "postgresql": {
+              "accessible": false,
+              "response_time": "< 10s",
+              "health_check_output": "",
+              "health_check_error": "/usr/bin/bash: Files\\Git\\bin\\bash.exe: No such file or directory\n"
+            },
+            "neo4j": {
+              "accessible": false,
+              "response_time": "< 10s",
+              "health_check_output": "",
+              "health_check_error": "/usr/bin/bash: Files\\Git\\bin\\bash.exe: No such file or directory\n"
+            },
+            "chromadb": {
+              "accessible": false,
+              "response_time": "< 10s",
+              "health_check_output": "",
+              "health_check_error": "/usr/bin/bash: Files\\Git\\bin\\bash.exe: No such file or directory\n"
+            },
+            "redis": {
+              "accessible": false,
+              "response_time": "< 10s",
+              "health_check_output": "",
+              "health_check_error": "/usr/bin/bash: Files\\Git\\bin\\bash.exe: No such file or directory\n"
+            }
+          }
+        },
+        "error_message": null
+      },
+      {
+        "requirement_id": "REQ-INFRA-002",
+        "description": "Data Persistence Validation",
+        "claimed_status": "Data persists across restarts",
+        "actual_status": "Docker services not operational - cannot test persistence",
+        "verified": false,
+        "measurement_method": "restart_cycle_validation",
+        "validation_timestamp": "2025-08-04 00:36:25.157613",
+        "evidence": {
+          "note": "Requires operational Docker services for validation"
+        },
+        "error_message": null
+      },
+      {
+        "requirement_id": "REQ-INFRA-003",
+        "description": "Cross-Platform Windows Integration",
+        "claimed_status": "100% Windows integration",
+        "actual_status": "100.0% Windows integration",
+        "verified": true,
+        "measurement_method": "windows_integration_testing",
+        "validation_timestamp": "2025-08-04 00:36:25.392993",
+        "evidence": {
+          "integration_tests": {
+            "platform_detection": true,
+            "python_executable": true,
+            "subprocess_support": true,
+            "file_system_access": true
+          }
+        },
+        "error_message": null
+      }
+    ],
+    "services": [
+      {
+        "requirement_id": "REQ-VALIDATE-001",
+        "description": "Real Service Integration Testing (NO MOCKING)",
+        "claimed_status": "All tests use real services",
+        "actual_status": "Mocking violations: 17, Real connections: 0/4",
+        "verified": false,
+        "measurement_method": "mocking_detection_and_connection_testing",
+        "validation_timestamp": "2025-08-04 00:36:44.833940",
+        "evidence": {
+          "mocking_violations": [
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\e2e\\test_foundation_e2e.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_api_client_unit.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_chromadb_vector_database.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_classification_models.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_core_models.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_foundation_working.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_hybrid_recommendation_pipeline.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_neo4j_knowledge_graph.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_openai_integration.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_safety_models.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_sdk_compliance_foundation.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_test_infrastructure.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_unspsc_etim_classification.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_user_profile_models.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_vendor_models.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_windows_compatibility_simple_unit.py",
+            "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\tests\\unit\\test_windows_sdk_compatibility_unit.py"
+          ],
+          "connection_tests": {
+            "postgresql": {
+              "connection_successful": false,
+              "connection_type": "real_service"
+            },
+            "neo4j": {
+              "connection_successful": false,
+              "connection_type": "real_service"
+            },
+            "chromadb": {
+              "connection_successful": false,
+              "connection_type": "real_service"
+            },
+            "redis": {
+              "connection_successful": false,
+              "connection_type": "real_service"
+            }
+          },
+          "test_files_scanned": 52
+        },
+        "error_message": null
+      },
+      {
+        "requirement_id": "REQ-VALIDATE-002",
+        "description": "Data Consistency and Integrity Validation",
+        "claimed_status": "Data consistency maintained across services",
+        "actual_status": "Services not operational - cannot test consistency",
+        "verified": false,
+        "measurement_method": "cross_service_data_validation",
+        "validation_timestamp": "2025-08-04 00:36:44.833940",
+        "evidence": {
+          "note": "Requires operational services for cross-service consistency testing"
+        },
+        "error_message": null
+      }
+    ],
+    "testing": [
+      {
+        "requirement_id": "REQ-TEST-001",
+        "description": "Test Infrastructure Success Rate Validation",
+        "claimed_status": "95% test success rate",
+        "actual_status": "0.0% test success rate",
+        "verified": false,
+        "measurement_method": "pytest_execution",
+        "validation_timestamp": "2025-08-04 00:38:08.170690",
+        "evidence": {
+          "discovered_tests": 771,
+          "executable_tests": 0,
+          "passed_tests": 0,
+          "failed_tests": 0,
+          "error_tests": 0,
+          "actual_success_rate": "0.0%",
+          "claimed_success_rate": "95%",
+          "discovery_output": "test_classification_functionality.py::test_unspsc_classification\ntest_classification_functionality.py::test_etim_classification\ntest_classification_functionality.py::test_dual_classification\ntest_classification_functionality.py::test_workflow_creation\ntest_complete_infrastructure.py::test_kailash_core_functionality\ntest_complete_infrastructure.py::test_dataflow_functionality\ntest_complete_infrastructure.py::test_integrated_workflow\ntest_dataflow_foundation.py::test_dataflow_foundation\ntest_dataflow_foundation.py::test_node_availability\ntest_dataflow_foundation_simple.py::test_dataflow_foundation\ntest_dataflow_workflows.py::test_basic_crud_operations\ntest_dataflow_workflows.py::test_classification_workflows\ntest_dataflow_workflows.py::test_enterprise_features\ntest_dataflow_workflows.py::test_document_processing\ntest_imports.py::test_import\ntest_imports.py::test_module\ntest_sdk_import.py::test_sdk_imports\ntests/compliance/test_safety_compliance_framework.py::TestSafetyStandardsValidation",
+          "test_output": "\n============================== warnings summary ===============================\n..\\..\\..\\..\\..\\..\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\dataflow\\core\\engine.py:1527\n  C:\\Users\\fujif\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\dataflow\\core\\engine.py:1527: RuntimeWarning: coroutine 'DataFlow._trigger_postgresql_migration_system.<locals>.run_postgresql_migration' was never awaited\n    loop.close()\n  Enable tracemalloc to get traceback where the object was allocated.\n  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.\n\ntest_infrastructure_analysis.py:28\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new_project\\test_infrastructure_analysis.py:28: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: test_infrastructure_analysis.py)\n    @dataclass\n\ntest_infrastructure_analysis.py:52\n  C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\src\\new"
+        },
+        "error_message": null
+      }
+    ],
+    "performance": [
+      {
+        "requirement_id": "REQ-PERF-001",
+        "description": "Performance Baseline Validation",
+        "claimed_status": "All SLA targets met",
+        "actual_status": "100.0% SLA compliance",
+        "verified": true,
+        "measurement_method": "system_performance_measurement",
+        "validation_timestamp": "2025-08-04 00:38:09.593518",
+        "evidence": {
+          "performance_metrics": {
+            "cpu_utilization": {
+              "actual": 23.2,
+              "threshold": 70,
+              "unit": "%"
+            },
+            "memory_utilization": {
+              "actual": 64.7,
+              "threshold": 80,
+              "unit": "%"
+            },
+            "disk_utilization": {
+              "actual": 27.6,
+              "threshold": 80,
+              "unit": "%"
+            },
+            "basic_operation_time": {
+              "actual": 0.0,
+              "threshold": 100,
+              "unit": "ms"
+            }
+          },
+          "performance_compliance": "100.0%",
+          "system_info": {
+            "cpu_count": 14,
+            "total_memory_gb": 31.61,
+            "available_memory_gb": 11.16
+          }
+        },
+        "error_message": null
+      }
+    ],
+    "compatibility": [
+      {
+        "requirement_id": "REQ-WIN-001",
+        "description": "Windows SDK Compatibility Validation",
+        "claimed_status": "100% Windows compatibility",
+        "actual_status": "75.0% Windows compatibility",
+        "verified": false,
+        "measurement_method": "windows_feature_testing",
+        "validation_timestamp": "2025-08-04 00:38:08.592664",
+        "evidence": {
+          "sdk_imports_working": false,
+          "windows_features": {
+            "platform_detection": true,
+            "resource_module_available": false,
+            "path_handling": true,
+            "subprocess_execution": true
+          },
+          "compatibility_percentage": "75.0%",
+          "platform": "Windows",
+          "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+          "import_output": "SDK_IMPORT_FAILED: No module named 'resource'\n",
+          "import_errors": ""
+        },
+        "error_message": null
+      }
+    ]
+  },
+  "critical_findings": [
+    "6 critical requirements failed validation",
+    "Infrastructure deployment failures detected",
+    "Service integration failures detected"
+  ],
+  "recommendations": [
+    "URGENT: Address failing validation requirements before proceeding",
+    "Focus on infrastructure and service deployment"
+  ],
+  "next_steps": [
+    "5. Remove all mocking from integration tests",
+    "6. Implement real service connection patterns",
+    "7. Validate data consistency across services",
+    "8. Implement continuous validation monitoring",
+    "9. Schedule daily truth baseline validation reports"
+  ]
+}

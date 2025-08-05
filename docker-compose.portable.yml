@@ -1,0 +1,417 @@
+# Cloud-Agnostic Nexus Platform Deployment
+# Works on any Docker host - no cloud dependencies
+# Self-contained with containerized services
+
+version: '3.8'
+
+x-common-healthcheck: &common-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+x-common-logging: &common-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-resource-limits: &default-resources
+  deploy:
+    resources:
+      limits:
+        memory: 1G
+        cpus: '0.5'
+      reservations:
+        memory: 512M
+        cpus: '0.25'
+
+services:
+  # PostgreSQL Database with Vector Support
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: ${PROJECT_NAME:-portable}-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexus_db}
+      POSTGRES_USER: ${POSTGRES_USER:-nexus_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus_secure_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus_user} -d ${POSTGRES_DB:-nexus_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      postgres
+      -c max_connections=${POSTGRES_MAX_CONNECTIONS:-200}
+      -c shared_buffers=${POSTGRES_SHARED_BUFFERS:-256MB}
+      -c effective_cache_size=${POSTGRES_EFFECTIVE_CACHE:-1GB}
+      -c work_mem=${POSTGRES_WORK_MEM:-4MB}
+      -c maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-64MB}
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: ${PROJECT_NAME:-portable}-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    <<: *default-resources
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAX_MEMORY:-512mb}
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --appendonly yes
+      --appendfsync everysec
+
+  # MinIO Object Storage (S3-compatible)
+  minio:
+    image: minio/minio:latest
+    container_name: ${PROJECT_NAME:-portable}-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_secure_password}
+      MINIO_CONSOLE_ADDRESS: :9001
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"     # API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+    <<: *default-resources
+    command: server /data --console-address ":9001"
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: ${PROJECT_NAME:-portable}-chromadb
+    environment:
+      CHROMA_SERVER_HOST: 0.0.0.0
+      CHROMA_SERVER_HTTP_PORT: 8000
+      CHROMA_SERVER_CORS_ALLOW_ORIGINS: '["*"]'
+      ANONYMIZED_TELEMETRY: false
+      IS_PERSISTENT: true
+      PERSIST_DIRECTORY: /chroma/chroma
+    ports:
+      - "${CHROMADB_PORT:-8001}:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat"]
+    <<: *default-resources
+
+  # Nexus Multi-Channel Platform
+  nexus-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile.nexus
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-latest}
+        BUILD_DATE: ${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
+        BUILD_REVISION: ${BUILD_REVISION:-main}
+    container_name: ${PROJECT_NAME:-portable}-nexus
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    environment:
+      # Core Configuration
+      - NEXUS_ENABLE_API=${NEXUS_ENABLE_API:-true}
+      - NEXUS_ENABLE_CLI=${NEXUS_ENABLE_CLI:-true}
+      - NEXUS_ENABLE_MCP=${NEXUS_ENABLE_MCP:-true}
+      - NEXUS_API_PORT=${NEXUS_API_PORT:-8000}
+      - NEXUS_MCP_PORT=${NEXUS_MCP_PORT:-3001}
+      - NEXUS_ENVIRONMENT=${NEXUS_ENVIRONMENT:-production}
+      
+      # Authentication & Security
+      - NEXUS_JWT_SECRET=${NEXUS_JWT_SECRET:-nexus-jwt-secret-change-in-production}
+      - NEXUS_API_KEY=${NEXUS_API_KEY:-nexus-api-key-change-in-production}
+      - NEXUS_SESSION_TIMEOUT=${NEXUS_SESSION_TIMEOUT:-3600}
+      - NEXUS_ENABLE_AUTH=${NEXUS_ENABLE_AUTH:-true}
+      - ENABLE_RATE_LIMITING=${ENABLE_RATE_LIMITING:-true}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-100}
+      
+      # Database Configuration
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-nexus_user}:${POSTGRES_PASSWORD:-nexus_secure_password}@postgres:5432/${POSTGRES_DB:-nexus_db}
+      - DATAFLOW_DATABASE_URL=postgresql://${POSTGRES_USER:-nexus_user}:${POSTGRES_PASSWORD:-nexus_secure_password}@postgres:5432/${POSTGRES_DB:-nexus_db}
+      - REDIS_URL=redis://redis:6379/0
+      
+      # Object Storage Configuration (S3-compatible)
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-admin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minio_secure_password}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-nexus-storage}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      
+      # Vector Database Configuration  
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - CHROMA_CLIENT_URL=http://chromadb:8000
+      
+      # AI Services Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLASSIFICATION_CONFIDENCE_THRESHOLD=${CLASSIFICATION_CONFIDENCE_THRESHOLD:-0.8}
+      
+      # Performance Configuration
+      - NEXUS_WORKERS=${NEXUS_WORKERS:-2}
+      - NEXUS_TIMEOUT=${NEXUS_TIMEOUT:-300}
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - MAX_CONNECTIONS=${MAX_CONNECTIONS:-100}
+      - POOL_SIZE=${POOL_SIZE:-10}
+      
+      # CORS Configuration (comma-separated origins)
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      
+      # Monitoring Configuration
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - METRICS_PORT=${METRICS_PORT:-9090}
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+      
+      # Production Optimization
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - WORKERS_PER_CORE=${WORKERS_PER_CORE:-1}
+      - MAX_WORKER_CONNECTIONS=${MAX_WORKER_CONNECTIONS:-1000}
+      
+    ports:
+      - "${NEXUS_API_PORT:-8000}:8000"     # API Server
+      - "${NEXUS_MCP_PORT:-3001}:3001"     # MCP Server
+      - "${NEXUS_METRICS_PORT:-9090}:9090" # Metrics
+      - "${NEXUS_HEALTH_PORT:-8080}:8080"  # Health Dashboard
+    volumes:
+      - nexus_logs:/app/logs
+      - nexus_data:/app/data
+      - nexus_cache:/app/cache
+      - nexus_uploads:/app/uploads
+      - nexus_config:/app/config
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: ${NEXUS_MEMORY_LIMIT:-4G}
+          cpus: ${NEXUS_CPU_LIMIT:-2.0}
+        reservations:
+          memory: ${NEXUS_MEMORY_RESERVATION:-2G}
+          cpus: ${NEXUS_CPU_RESERVATION:-1.0}
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: ${PROJECT_NAME:-portable}-traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.debug=false"
+      - "--log.level=INFO"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false" 
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.api.address=:8080"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+      - "--global.sendAnonymousUsage=false"
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_data:/data
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD", "traefik", "healthcheck"]
+    <<: *default-resources
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${BASE_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ${PROJECT_NAME:-portable}-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.listen-address=0.0.0.0:9090'
+    volumes:
+      - ./config/prometheus-portable.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9091}:9090"
+    networks:
+      - portable-network
+    restart: unless-stopped 
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+    <<: *default-resources
+    depends_on:
+      - nexus-platform
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ${PROJECT_NAME:-portable}-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_FEATURE_TOGGLES_ENABLE=newNavigation
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3100}
+      - GF_DATABASE_TYPE=sqlite3
+      - GF_DATABASE_PATH=/var/lib/grafana/grafana.db
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_PORT:-3100}:3000"
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health"]
+    <<: *default-resources
+    depends_on:
+      - prometheus
+
+  # Frontend (Optional)
+  frontend:
+    build:
+      context: ./fe-reference
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_MCP_URL: ${NEXT_PUBLIC_MCP_URL:-http://localhost:3001}
+    container_name: ${PROJECT_NAME:-portable}-frontend
+    depends_on:
+      - nexus-platform
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_MCP_URL=${NEXT_PUBLIC_MCP_URL:-http://localhost:3001}
+      - NODE_ENV=production
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - portable-network
+    restart: unless-stopped
+    logging: *common-logging
+    healthcheck:
+      <<: *common-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+    <<: *default-resources
+    profiles:
+      - with-frontend
+
+volumes:
+  # Database volumes
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  chromadb_data:
+    driver: local
+  minio_data:
+    driver: local
+  
+  # Application volumes
+  nexus_logs:
+    driver: local
+  nexus_data:
+    driver: local
+  nexus_cache:
+    driver: local
+  nexus_uploads:
+    driver: local
+  nexus_config:
+    driver: local
+  
+  # Monitoring volumes
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  
+  # Proxy volumes
+  traefik_data:
+    driver: local
+
+networks:
+  portable-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${NETWORK_SUBNET:-172.30.0.0/16}
+          gateway: ${NETWORK_GATEWAY:-172.30.0.1}
