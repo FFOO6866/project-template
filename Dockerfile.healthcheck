@@ -1,0 +1,50 @@
+# Health Check Service Container
+# Monitors all production services and reports status
+FROM python:3.11-slim
+
+# Metadata
+LABEL maintainer="Horme POV Team" \
+      description="Service health monitoring container" \
+      version="1.0.0"
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    netcat-openbsd \
+    postgresql-client \
+    redis-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    requests==2.31.0 \
+    redis==5.0.1 \
+    psycopg2-binary==2.9.9
+
+# Create non-root user
+RUN groupadd -g 1001 healthcheck && \
+    useradd -r -u 1001 -g healthcheck -d /app -s /sbin/nologin \
+    -c "Health Check User" healthcheck
+
+# Create application directory
+WORKDIR /app
+RUN mkdir -p /app/logs && chown -R healthcheck:healthcheck /app
+
+# Copy health check script
+COPY --chown=healthcheck:healthcheck scripts/healthcheck.py /app/healthcheck.py
+RUN chmod 755 /app/healthcheck.py
+
+# Switch to non-root user
+USER healthcheck
+
+# Health check interval (default: 30 seconds)
+ENV CHECK_INTERVAL=30
+
+# Default command: run health check in monitoring mode
+CMD ["python", "/app/healthcheck.py", "--monitor"]

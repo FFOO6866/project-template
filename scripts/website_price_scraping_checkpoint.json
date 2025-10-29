@@ -1,0 +1,12 @@
+{
+  "last_product_id": 125,
+  "timestamp": 1761173722.304327,
+  "stats": {
+    "products_processed": 100,
+    "products_with_prices": 0,
+    "products_updated": 0,
+    "products_not_found": 100,
+    "errors": 0,
+    "start_time": 1761173391.0429912
+  }
+}

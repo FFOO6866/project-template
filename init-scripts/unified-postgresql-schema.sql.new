@@ -1,0 +1,558 @@
+-- Unified PostgreSQL Schema for Horme POV Project
+-- Consolidates all SQLite databases into a single PostgreSQL database
+-- Created: 2025-08-06
+
+BEGIN;
+
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "btree_gin";
+
+-- Create schema
+CREATE SCHEMA IF NOT EXISTS public;
+
+-- =============================================================================
+-- PRODUCT MANAGEMENT TABLES (from products.db)
+-- =============================================================================
+
+-- Categories table
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for category name searches
+CREATE INDEX idx_categories_name ON categories USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_categories_slug ON categories (slug);
+
+-- Brands table
+CREATE TABLE brands (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT,
+    logo_url TEXT,
+    website_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for brand name searches
+CREATE INDEX idx_brands_name ON brands USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_brands_slug ON brands (slug);
+
+-- Products table (main product catalog)
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    sku TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    short_description TEXT,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    brand_id INTEGER REFERENCES brands(id) ON DELETE SET NULL,
+    product_type TEXT,
+    status TEXT DEFAULT 'active',
+    weight DECIMAL(10,2),
+    dimensions TEXT,
+    color TEXT,
+    material TEXT,
+    manufacturer_part_number TEXT,
+    barcode TEXT,
+    tags TEXT[],
+    images JSONB DEFAULT '[]'::jsonb,
+    attributes JSONB DEFAULT '{}'::jsonb,
+    seo_title TEXT,
+    seo_description TEXT,
+    seo_keywords TEXT,
+    is_featured BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create comprehensive indexes for products
+CREATE INDEX idx_products_sku ON products (sku);
+CREATE INDEX idx_products_name ON products USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_products_category ON products (category_id);
+CREATE INDEX idx_products_brand ON products (brand_id);
+CREATE INDEX idx_products_status ON products (status);
+CREATE INDEX idx_products_tags ON products USING GIN (tags);
+CREATE INDEX idx_products_attributes ON products USING GIN (attributes);
+CREATE INDEX idx_products_featured ON products (is_featured) WHERE is_featured = true;
+
+-- Product pricing table
+CREATE TABLE product_pricing (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    cost_price DECIMAL(12,2),
+    wholesale_price DECIMAL(12,2),
+    retail_price DECIMAL(12,2),
+    sale_price DECIMAL(12,2),
+    currency TEXT DEFAULT 'USD',
+    price_tier TEXT,
+    minimum_quantity INTEGER DEFAULT 1,
+    bulk_pricing JSONB DEFAULT '[]'::jsonb,
+    price_valid_from TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    price_valid_until TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_product_pricing_product ON product_pricing (product_id);
+CREATE INDEX idx_product_pricing_retail ON product_pricing (retail_price);
+CREATE INDEX idx_product_pricing_active ON product_pricing (is_active);
+
+-- Product specifications table
+CREATE TABLE product_specifications (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    specification_group TEXT,
+    specification_name TEXT NOT NULL,
+    specification_value TEXT NOT NULL,
+    specification_unit TEXT,
+    display_order INTEGER DEFAULT 0,
+    is_filterable BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_product_specs_product ON product_specifications (product_id);
+CREATE INDEX idx_product_specs_name ON product_specifications (specification_name);
+CREATE INDEX idx_product_specs_group ON product_specifications (specification_group);
+CREATE INDEX idx_product_specs_filterable ON product_specifications (is_filterable) WHERE is_filterable = true;
+
+-- Product inventory table
+CREATE TABLE product_inventory (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    warehouse_location TEXT,
+    quantity_on_hand INTEGER DEFAULT 0,
+    quantity_reserved INTEGER DEFAULT 0,
+    quantity_available INTEGER GENERATED ALWAYS AS (quantity_on_hand - quantity_reserved) STORED,
+    minimum_stock_level INTEGER DEFAULT 0,
+    maximum_stock_level INTEGER,
+    reorder_point INTEGER DEFAULT 0,
+    reorder_quantity INTEGER DEFAULT 0,
+    supplier_id TEXT,
+    supplier_sku TEXT,
+    lead_time_days INTEGER DEFAULT 0,
+    last_stock_update TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_tracked BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_product_inventory_product ON product_inventory (product_id);
+CREATE INDEX idx_product_inventory_available ON product_inventory (quantity_available);
+CREATE INDEX idx_product_inventory_low_stock ON product_inventory (minimum_stock_level, quantity_available);
+
+-- Product enhancements table (AI-generated content, reviews, etc.)
+CREATE TABLE product_enhancements (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    enhancement_type TEXT NOT NULL, -- 'ai_description', 'review_summary', 'compatibility', etc.
+    content TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    confidence_score DECIMAL(3,2) DEFAULT 0.0,
+    source TEXT,
+    language TEXT DEFAULT 'en',
+    is_approved BOOLEAN DEFAULT false,
+    approved_by TEXT,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_product_enhancements_product ON product_enhancements (product_id);
+CREATE INDEX idx_product_enhancements_type ON product_enhancements (enhancement_type);
+CREATE INDEX idx_product_enhancements_approved ON product_enhancements (is_approved);
+
+-- Product search index table (for full-text search optimization)
+CREATE TABLE product_search_index (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    search_vector TSVECTOR,
+    keywords TEXT[],
+    category_path TEXT,
+    brand_name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_product_search_vector ON product_search_index USING GIN (search_vector);
+CREATE INDEX idx_product_search_keywords ON product_search_index USING GIN (keywords);
+
+-- =============================================================================
+-- CUSTOMER MANAGEMENT TABLES (from sales_assistant.db)
+-- =============================================================================
+
+-- Customers table
+CREATE TABLE customers (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    phone TEXT,
+    company TEXT,
+    industry TEXT,
+    address JSONB DEFAULT '{}'::jsonb,
+    contact_preferences JSONB DEFAULT '{}'::jsonb,
+    customer_type TEXT DEFAULT 'prospect', -- prospect, lead, customer, inactive
+    credit_limit DECIMAL(12,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_customers_email ON customers (email);
+CREATE INDEX idx_customers_name ON customers USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_customers_company ON customers USING GIN (company gin_trgm_ops);
+CREATE INDEX idx_customers_type ON customers (customer_type);
+
+-- Sales opportunities table
+CREATE TABLE opportunities (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    value DECIMAL(12,2),
+    currency TEXT DEFAULT 'USD',
+    stage TEXT DEFAULT 'prospecting', -- prospecting, qualification, proposal, negotiation, closed_won, closed_lost
+    probability INTEGER DEFAULT 0, -- 0-100
+    expected_close_date DATE,
+    actual_close_date DATE,
+    source TEXT,
+    assigned_to TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_opportunities_customer ON opportunities (customer_id);
+CREATE INDEX idx_opportunities_stage ON opportunities (stage);
+CREATE INDEX idx_opportunities_close_date ON opportunities (expected_close_date);
+CREATE INDEX idx_opportunities_value ON opportunities (value);
+
+-- =============================================================================
+-- QUOTATION MANAGEMENT TABLES (from quotations.db)
+-- =============================================================================
+
+-- Quotations table
+CREATE TABLE quotations (
+    id SERIAL PRIMARY KEY,
+    quotation_number TEXT NOT NULL UNIQUE,
+    customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+    customer_name TEXT NOT NULL,
+    customer_email TEXT,
+    customer_phone TEXT,
+    customer_company TEXT,
+    project_title TEXT,
+    project_description TEXT,
+    status TEXT DEFAULT 'draft', -- draft, sent, approved, rejected, expired
+    subtotal DECIMAL(12,2) DEFAULT 0.00,
+    tax_amount DECIMAL(12,2) DEFAULT 0.00,
+    discount_amount DECIMAL(12,2) DEFAULT 0.00,
+    total_amount DECIMAL(12,2) DEFAULT 0.00,
+    currency TEXT DEFAULT 'USD',
+    valid_until DATE,
+    terms_conditions TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_quotations_number ON quotations (quotation_number);
+CREATE INDEX idx_quotations_customer ON quotations (customer_id);
+CREATE INDEX idx_quotations_status ON quotations (status);
+CREATE INDEX idx_quotations_valid_until ON quotations (valid_until);
+CREATE INDEX idx_quotations_total ON quotations (total_amount);
+
+-- Quotation items table
+CREATE TABLE quotation_items (
+    id SERIAL PRIMARY KEY,
+    quotation_id INTEGER NOT NULL REFERENCES quotations(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+    product_sku TEXT,
+    product_name TEXT NOT NULL,
+    product_description TEXT,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price DECIMAL(12,2) NOT NULL,
+    discount_percentage DECIMAL(5,2) DEFAULT 0.00,
+    discount_amount DECIMAL(12,2) DEFAULT 0.00,
+    line_total DECIMAL(12,2) GENERATED ALWAYS AS ((quantity * unit_price) - discount_amount) STORED,
+    specifications JSONB DEFAULT '{}'::jsonb,
+    notes TEXT,
+    delivery_time_days INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_quotation_items_quotation ON quotation_items (quotation_id);
+CREATE INDEX idx_quotation_items_product ON quotation_items (product_id);
+CREATE INDEX idx_quotation_items_sku ON quotation_items (product_sku);
+
+-- =============================================================================
+-- DOCUMENT MANAGEMENT TABLES (from documents.db)
+-- =============================================================================
+
+-- Documents table
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT,
+    document_type TEXT, -- rfp, proposal, specification, manual, etc.
+    file_path TEXT,
+    file_name TEXT,
+    file_size INTEGER,
+    mime_type TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    tags TEXT[],
+    status TEXT DEFAULT 'active', -- active, archived, deleted
+    uploaded_by TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_documents_title ON documents USING GIN (title gin_trgm_ops);
+CREATE INDEX idx_documents_type ON documents (document_type);
+CREATE INDEX idx_documents_status ON documents (status);
+CREATE INDEX idx_documents_tags ON documents USING GIN (tags);
+CREATE INDEX idx_documents_content ON documents USING GIN (to_tsvector('english', content));
+
+-- Document versions table
+CREATE TABLE document_versions (
+    id SERIAL PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    content TEXT,
+    change_notes TEXT,
+    created_by TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(document_id, version_number)
+);
+
+CREATE INDEX idx_document_versions_document ON document_versions (document_id);
+CREATE INDEX idx_document_versions_number ON document_versions (document_id, version_number);
+
+-- =============================================================================
+-- SAFETY COMPLIANCE TABLES (OSHA/ANSI Standards)
+-- =============================================================================
+
+-- OSHA Standards table
+CREATE TABLE osha_standards (
+    id SERIAL PRIMARY KEY,
+    cfr TEXT NOT NULL UNIQUE, -- 29 CFR number (e.g., "29 CFR 1926.102")
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    requirements TEXT NOT NULL,
+    applies_to TEXT[], -- Array of work types/activities
+    required_ppe TEXT[], -- Array of required PPE items
+    mandatory BOOLEAN DEFAULT true,
+    risk_level TEXT NOT NULL, -- low, medium, high, critical
+    penalties TEXT, -- Penalty information for non-compliance
+    legal_reference_url TEXT NOT NULL, -- osha.gov URL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_osha_standards_cfr ON osha_standards (cfr);
+CREATE INDEX idx_osha_standards_risk_level ON osha_standards (risk_level);
+CREATE INDEX idx_osha_standards_applies_to ON osha_standards USING GIN (applies_to);
+
+-- ANSI Standards table
+CREATE TABLE ansi_standards (
+    id SERIAL PRIMARY KEY,
+    standard TEXT NOT NULL UNIQUE, -- ANSI standard number (e.g., "ANSI Z87.1-2020")
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    standard_type TEXT NOT NULL, -- eye_protection, hearing_protection, etc.
+    specifications JSONB NOT NULL DEFAULT '{}'::jsonb, -- Technical specifications
+    markings JSONB DEFAULT '{}'::jsonb, -- Required markings
+    test_requirements JSONB DEFAULT '{}'::jsonb, -- Test methods and requirements
+    product_types TEXT[], -- Array of applicable product types
+    reference_url TEXT, -- ANSI/ISEA reference URL
+    industries TEXT[], -- Applicable industries
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ansi_standards_standard ON ansi_standards (standard);
+CREATE INDEX idx_ansi_standards_type ON ansi_standards (standard_type);
+CREATE INDEX idx_ansi_standards_product_types ON ansi_standards USING GIN (product_types);
+
+-- Tool Risk Classifications table
+CREATE TABLE tool_risk_classifications (
+    id SERIAL PRIMARY KEY,
+    tool_name TEXT NOT NULL UNIQUE,
+    category TEXT NOT NULL, -- power_tool, hand_tool, painting_tool, etc.
+    risk_level TEXT NOT NULL, -- low, medium, high, critical
+    hazards TEXT[] NOT NULL, -- Array of hazards
+    osha_standards TEXT[], -- Array of applicable OSHA CFR numbers
+    mandatory_ppe TEXT[] NOT NULL, -- Array of mandatory PPE items
+    recommended_ppe TEXT[], -- Array of recommended PPE items
+    training_required BOOLEAN DEFAULT false,
+    certification_required BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_tool_risk_name ON tool_risk_classifications (tool_name);
+CREATE INDEX idx_tool_risk_category ON tool_risk_classifications (category);
+CREATE INDEX idx_tool_risk_level ON tool_risk_classifications (risk_level);
+CREATE INDEX idx_tool_risk_hazards ON tool_risk_classifications USING GIN (hazards);
+
+-- Task Hazard Mappings table
+CREATE TABLE task_hazard_mappings (
+    id SERIAL PRIMARY KEY,
+    task_id TEXT NOT NULL UNIQUE, -- Task identifier (e.g., "drilling_concrete")
+    task_name TEXT NOT NULL,
+    hazards TEXT[] NOT NULL, -- Array of hazards
+    risk_level TEXT NOT NULL, -- low, medium, high, critical
+    osha_standards TEXT[], -- Array of applicable OSHA CFR numbers
+    mandatory_ppe TEXT[] NOT NULL, -- Array of mandatory PPE items
+    recommended_ppe TEXT[], -- Array of recommended PPE items
+    safety_notes TEXT, -- Additional safety information
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_task_hazard_task_id ON task_hazard_mappings (task_id);
+CREATE INDEX idx_task_hazard_risk_level ON task_hazard_mappings (risk_level);
+CREATE INDEX idx_task_hazard_hazards ON task_hazard_mappings USING GIN (hazards);
+
+-- ANSI Equipment Specifications table
+CREATE TABLE ansi_equipment_specifications (
+    id SERIAL PRIMARY KEY,
+    equipment_type TEXT NOT NULL UNIQUE, -- safety_glasses, earplugs, etc.
+    ansi_standard TEXT NOT NULL, -- Reference to ANSI standard
+    required_marking TEXT, -- Required marking on equipment
+    protection_level TEXT NOT NULL, -- basic, moderate, high, maximum
+    specifications JSONB DEFAULT '{}'::jsonb, -- Detailed specifications
+    suitable_for TEXT[], -- Array of suitable applications
+    not_suitable_for TEXT[], -- Array of unsuitable applications
+    test_specifications JSONB DEFAULT '{}'::jsonb, -- Test requirements
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ansi_standard) REFERENCES ansi_standards(standard) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_ansi_equipment_type ON ansi_equipment_specifications (equipment_type);
+CREATE INDEX idx_ansi_equipment_standard ON ansi_equipment_specifications (ansi_standard);
+CREATE INDEX idx_ansi_equipment_protection ON ansi_equipment_specifications (protection_level);
+
+-- =============================================================================
+-- AUDIT AND SYSTEM TABLES
+-- =============================================================================
+
+-- Audit log table for tracking all changes
+CREATE TABLE audit_log (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    record_id INTEGER NOT NULL,
+    action TEXT NOT NULL, -- INSERT, UPDATE, DELETE
+    old_values JSONB,
+    new_values JSONB,
+    changed_by TEXT,
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ip_address INET
+);
+
+CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id);
+CREATE INDEX idx_audit_log_action ON audit_log (action);
+CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at);
+
+-- System settings table
+CREATE TABLE system_settings (
+    id SERIAL PRIMARY KEY,
+    setting_key TEXT NOT NULL UNIQUE,
+    setting_value TEXT,
+    setting_type TEXT DEFAULT 'string', -- string, integer, boolean, json
+    description TEXT,
+    is_encrypted BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_system_settings_key ON system_settings (setting_key);
+
+-- =============================================================================
+-- TRIGGERS FOR AUTOMATIC TIMESTAMP UPDATES
+-- =============================================================================
+
+-- Function to update timestamp columns
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create triggers for all tables with updated_at columns
+CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_brands_updated_at BEFORE UPDATE ON brands FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_pricing_updated_at BEFORE UPDATE ON product_pricing FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_specifications_updated_at BEFORE UPDATE ON product_specifications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_inventory_updated_at BEFORE UPDATE ON product_inventory FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_enhancements_updated_at BEFORE UPDATE ON product_enhancements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_search_index_updated_at BEFORE UPDATE ON product_search_index FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_opportunities_updated_at BEFORE UPDATE ON opportunities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_quotations_updated_at BEFORE UPDATE ON quotations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_quotation_items_updated_at BEFORE UPDATE ON quotation_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_osha_standards_updated_at BEFORE UPDATE ON osha_standards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_ansi_standards_updated_at BEFORE UPDATE ON ansi_standards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_tool_risk_classifications_updated_at BEFORE UPDATE ON tool_risk_classifications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_task_hazard_mappings_updated_at BEFORE UPDATE ON task_hazard_mappings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_ansi_equipment_specifications_updated_at BEFORE UPDATE ON ansi_equipment_specifications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
+-- INITIAL DATA SEEDING
+-- =============================================================================
+
+-- Insert default system settings
+INSERT INTO system_settings (setting_key, setting_value, setting_type, description) VALUES
+('app_name', 'Horme POV', 'string', 'Application name'),
+('app_version', '1.0.0', 'string', 'Application version'),
+('default_currency', 'USD', 'string', 'Default currency for pricing'),
+('tax_rate', '0.08', 'decimal', 'Default tax rate'),
+('quotation_valid_days', '30', 'integer', 'Default quotation validity in days');
+
+COMMIT;
+
+-- =============================================================================
+-- VERIFICATION QUERIES
+-- =============================================================================
+
+-- List all tables created
+SELECT schemaname, tablename, tableowner 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+ORDER BY tablename;
+
+-- Check table relationships
+SELECT 
+    tc.table_name, 
+    kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
+FROM information_schema.table_constraints AS tc 
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+      AND tc.table_schema = kcu.table_schema
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+      AND ccu.table_schema = tc.table_schema
+WHERE tc.constraint_type = 'FOREIGN KEY' 
+    AND tc.table_schema = 'public'
+ORDER BY tc.table_name, kcu.column_name;

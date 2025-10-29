@@ -1,0 +1,88 @@
+{
+  "test_timestamp": "2025-08-05T22:24:01.611676",
+  "brands_tested": [
+    "3M",
+    "Bosch",
+    "Karcher",
+    "DeWalt",
+    "Stanley"
+  ],
+  "successful_discoveries": 5,
+  "success_rate": 100.0,
+  "results": {
+    "3M": {
+      "brand": "3M",
+      "official_website": "https://www.3m.com.sg",
+      "singapore_distributor": "https://www.3m.com.sg",
+      "product_catalog_url": "https://www.3m.com.sg/3M/en_SG/p/",
+      "technical_docs_section": "https://www.3m.com.sg/3M/en_SG/safety-centers/",
+      "contact_info": {},
+      "product_categories": [
+        "Safety Equipment",
+        "Industrial Tapes",
+        "Abrasives",
+        "Adhesives"
+      ],
+      "last_verified": "2025-08-05T22:24:01.611676"
+    },
+    "Bosch": {
+      "brand": "Bosch",
+      "official_website": "https://www.bosch.com.sg",
+      "singapore_distributor": "https://www.bosch.com.sg",
+      "product_catalog_url": "https://www.bosch.com.sg/products/",
+      "technical_docs_section": "https://www.bosch.com.sg/service-support/",
+      "contact_info": {},
+      "product_categories": [
+        "Power Tools",
+        "Hand Tools",
+        "Measuring Tools",
+        "Garden Tools"
+      ],
+      "last_verified": "2025-08-05T22:24:01.611676"
+    },
+    "Karcher": {
+      "brand": "Karcher",
+      "official_website": "https://www.karcher.com.sg",
+      "singapore_distributor": "https://www.karcher.com.sg",
+      "product_catalog_url": "https://www.karcher.com.sg/products/",
+      "technical_docs_section": "https://www.karcher.com.sg/service/",
+      "contact_info": {},
+      "product_categories": [
+        "Cleaning Equipment",
+        "Pressure Washers",
+        "Vacuum Cleaners"
+      ],
+      "last_verified": "2025-08-05T22:24:01.611676"
+    },
+    "DeWalt": {
+      "brand": "DeWalt",
+      "official_website": "https://www.dewalt.com.sg",
+      "singapore_distributor": "https://www.dewalt.com.sg",
+      "product_catalog_url": "https://www.dewalt.com.sg/products/",
+      "technical_docs_section": "https://www.dewalt.com.sg/support/",
+      "contact_info": {},
+      "product_categories": [
+        "Power Tools",
+        "Hand Tools",
+        "Storage",
+        "Accessories"
+      ],
+      "last_verified": "2025-08-05T22:24:01.611676"
+    },
+    "Stanley": {
+      "brand": "Stanley",
+      "official_website": "https://www.stanleytools.com.sg",
+      "singapore_distributor": "https://www.stanleytools.com.sg",
+      "product_catalog_url": "https://www.stanleytools.com.sg/products/",
+      "technical_docs_section": "https://www.stanleytools.com.sg/support/",
+      "contact_info": {},
+      "product_categories": [
+        "Hand Tools",
+        "Power Tools",
+        "Storage",
+        "Measuring Tools"
+      ],
+      "last_verified": "2025-08-05T22:24:01.611676"
+    }
+  }
+}

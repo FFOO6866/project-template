@@ -1,0 +1,60 @@
+# Horme Production API Dockerfile
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Install system dependencies for enhanced document processing
+# poppler-utils: PDF to image conversion (pdf2image)
+# ghostscript: PDF processing (Camelot)
+# libmagic1: File type detection
+# tesseract-ocr: OCR for scanned documents (future)
+# libreoffice: Document conversion (optional, for Word to PDF)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    poppler-utils \
+    ghostscript \
+    libmagic1 \
+    python3-tk \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+# Note: libreoffice excluded to reduce image size (can be added if Word->Image conversion needed)
+
+# Set work directory
+WORKDIR /app
+
+# Create directories
+RUN mkdir -p /app/logs /app/uploads
+
+# Copy requirements
+COPY requirements-api.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-api.txt
+
+# Copy application code
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY *.py ./
+
+# Pre-download AI models (as root before switching to non-root user)
+RUN python scripts/download_models.py || echo "Warning: Model download failed, will download on first use"
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash horme && \
+    chown -R horme:horme /app
+USER horme
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run application
+CMD ["uvicorn", "src.nexus_backend_api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

@@ -1,195 +1,624 @@
-version: '3.8'
+# Horme POV Production Deployment
+# Complete production stack with monitoring, security, and high availability
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: horme-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: horme_product_db
-      POSTGRES_USER: horme_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-horme_password}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U horme_user -d horme_product_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - horme-network
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: horme-redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - horme-network
-
-  # Nexus Gateway Service
-  nexus-gateway:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.nexus-gateway
-    container_name: horme-nexus-gateway
-    restart: unless-stopped
-    environment:
-      - NEXUS_ENV=production
-      - DATABASE_URL=postgresql://horme_user:${POSTGRES_PASSWORD:-horme_password}@postgres:5432/horme_product_db
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
-      - JWT_SECRET=${JWT_SECRET:-your-secret-key-here}
-      - NEXUS_LOG_LEVEL=${LOG_LEVEL:-INFO}
-    ports:
-      - "8000:8000"  # REST API
-      - "8001:8001"  # WebSocket
-      - "8002:8002"  # MCP Server
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - nexus_logs:/app/logs
-      - nexus_data:/app/data
-    networks:
-      - horme-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # DataFlow Service
-  dataflow-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.dataflow-service
-    container_name: horme-dataflow
-    restart: unless-stopped
-    environment:
-      - DATAFLOW_ENV=production
-      - DATABASE_URL=postgresql://horme_user:${POSTGRES_PASSWORD:-horme_password}@postgres:5432/horme_product_db
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/1
-      - DATAFLOW_LOG_LEVEL=${LOG_LEVEL:-INFO}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - dataflow_logs:/app/logs
-    networks:
-      - horme-network
-
-  # MCP Server
-  mcp-server:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.mcp-server
-    container_name: horme-mcp-server
-    restart: unless-stopped
-    environment:
-      - MCP_ENV=production
-      - DATABASE_URL=postgresql://horme_user:${POSTGRES_PASSWORD:-horme_password}@postgres:5432/horme_product_db
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/2
-      - MCP_LOG_LEVEL=${LOG_LEVEL:-INFO}
-    ports:
-      - "3000:3000"  # MCP WebSocket
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - mcp_logs:/app/logs
-    networks:
-      - horme-network
-
-  # Classification Service
-  classification-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.classification-service
-    container_name: horme-classification
-    restart: unless-stopped
-    environment:
-      - CLASSIFICATION_ENV=production
-      - DATABASE_URL=postgresql://horme_user:${POSTGRES_PASSWORD:-horme_password}@postgres:5432/horme_product_db
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/3
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - CLASSIFICATION_LOG_LEVEL=${LOG_LEVEL:-INFO}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - classification_logs:/app/logs
-      - classification_models:/app/models
-    networks:
-      - horme-network
-
-  # Nginx Reverse Proxy
+  # Nginx Reverse Proxy with SSL/TLS termination
   nginx:
-    image: nginx:alpine
+    image: nginx:1.25-alpine
     container_name: horme-nginx
-    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
       - nginx_logs:/var/log/nginx
     depends_on:
-      - nexus-gateway
-    networks:
-      - horme-network
+      - api
+      - frontend
+      - websocket
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "nginx", "-t"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - horme_network
 
-networks:
-  horme-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+  # FastAPI Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: horme-api
+    ports:
+      - "${API_PORT:-8002}:8000"
+    env_file:
+      - .env.production
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-horme_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-horme_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXUS_JWT_SECRET=${NEXUS_JWT_SECRET}
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - api_logs:/app/logs
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # WebSocket Chat Server
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    container_name: horme-websocket
+    environment:
+      - ENVIRONMENT=production
+      - WEBSOCKET_HOST=0.0.0.0
+      - WEBSOCKET_PORT=8001
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-preview}
+      - OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS:-2000}
+      - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0.1}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-horme_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-horme_db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    ports:
+      - "8001:8001"
+    volumes:
+      - websocket_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 8001)); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+        - NEXT_PUBLIC_MCP_URL=${NEXT_PUBLIC_MCP_URL}
+        - NEXT_PUBLIC_NEXUS_URL=${NEXT_PUBLIC_NEXUS_URL}
+    container_name: horme-frontend
+    ports:
+      - "${FRONTEND_PORT:-3010}:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  # MCP Server (Model Context Protocol)
+  # DISABLED: Dockerfile not yet created (deployment/docker/Dockerfile.mcp-production)
+  # Uncomment when Dockerfile is ready
+  # mcp:
+  #   build:
+  #     context: .
+  #     dockerfile: deployment/docker/Dockerfile.mcp-production
+  #   container_name: horme-mcp
+  #   environment:
+  #     - ENVIRONMENT=production
+  #     - MCP_ENVIRONMENT=production
+  #     - MCP_LOG_LEVEL=${LOG_LEVEL:-INFO}
+  #     - DATABASE_URL=postgresql://${POSTGRES_USER:-horme_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-horme_db}
+  #     - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+  #     - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+  #     - NEO4J_USER=${NEO4J_USER:-neo4j}
+  #     - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - SECRET_KEY=${API_SECRET_KEY}
+  #     - MCP_WORKER_THREADS=4
+  #     - MCP_CONNECTION_POOL_SIZE=20
+  #   ports:
+  #     - "${MCP_PORT:-3001}:3001"    # HTTP API
+  #     - "${MCP_WS_PORT:-3002}:3002" # WebSocket
+  #     - "${MCP_METRICS_PORT:-9092}:9090"  # Metrics
+  #   volumes:
+  #     - mcp_logs:/app/logs
+  #     - mcp_data:/app/data
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     neo4j:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "python", "/app/health_check.py"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 60s
+  #   networks:
+  #     - horme_network
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1G
+  #         cpus: '0.5'
+
+  # PostgreSQL Database with production optimizations and pgvector
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    image: horme-postgres:15-pgvector
+    container_name: horme-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-horme_db}
+      POSTGRES_USER: ${POSTGRES_USER:-horme_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+      - ./init-scripts/unified-postgresql-schema.sql:/docker-entrypoint-initdb.d/01-unified-schema.sql:ro
+      - ./init-scripts/02-add-vector-support.sql:/docker-entrypoint-initdb.d/02-add-vector-support.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-horme_user} -d ${POSTGRES_DB:-horme_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=2GB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=32MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c log_statement=all
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: horme-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --appendonly yes
+      --appendfsync everysec
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.25'
+
+  # Neo4j Knowledge Graph Database
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: horme-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      - NEO4J_dbms_memory_heap_initial__size=256m
+      - NEO4J_dbms_memory_heap_max__size=512m
+      - NEO4J_dbms_memory_pagecache_size=256m
+      - NEO4J_dbms_connector_bolt_listen__address=:7687
+      - NEO4J_dbms_connector_http_listen__address=:7474
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+      - ./init-scripts/neo4j-schema.cypher:/docker-entrypoint-initdb.d/neo4j-schema.cypher:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: horme-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    profiles:
+      - monitoring
+
+  # Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: horme-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+    profiles:
+      - monitoring
+
+  # Node Exporter for system metrics
+  node_exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: horme-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - horme_network
+    profiles:
+      - monitoring
+
+  # Postgres Exporter for database metrics
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: horme-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-horme_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-horme_db}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - horme_network
+    profiles:
+      - monitoring
+
+  # Redis Exporter for cache metrics
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: horme-redis-exporter
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "9121:9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - horme_network
+    profiles:
+      - monitoring
+
+  # Health Check Service
+  healthcheck:
+    build:
+      context: .
+      dockerfile: Dockerfile.healthcheck
+    container_name: horme-healthcheck
+    environment:
+      - CHECK_INTERVAL=30
+      - SERVICES=nginx:80,api:8000,frontend:3000,postgres:5432,redis:6379,neo4j:7474
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nginx
+      - api
+      - frontend
+      - postgres
+      - redis
+      - neo4j
+    restart: unless-stopped
+    networks:
+      - horme_network
+
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    container_name: horme-backup
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-horme_db}
+      POSTGRES_USER: ${POSTGRES_USER:-horme_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+    volumes:
+      - postgres_backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    command: >
+      sh -c "
+        echo '${BACKUP_SCHEDULE} /backup.sh' | crontab -
+        && crond -f
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - horme_network
+    profiles:
+      - backup
+
+  # Email Monitoring Service for Quotation Requests
+  email-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.email-monitor
+    container_name: horme-email-monitor
+    env_file:
+      - .env.production
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-horme_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-horme_db}
+      - EMAIL_IMAP_SERVER=${EMAIL_IMAP_SERVER}
+      - EMAIL_IMAP_PORT=${EMAIL_IMAP_PORT:-993}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL:-true}
+      - EMAIL_POLL_INTERVAL_SECONDS=${EMAIL_POLL_INTERVAL_SECONDS:-300}
+      - EMAIL_ATTACHMENT_DIR=/app/email-attachments
+      - EMAIL_MAX_ATTACHMENT_SIZE_MB=${EMAIL_MAX_ATTACHMENT_SIZE_MB:-10}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-preview}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - email_attachments:/app/email-attachments
+      - email_monitor_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - horme_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
 
 volumes:
   postgres_data:
     driver: local
+    name: horme_postgres_data
+  postgres_backups:
+    driver: local
+    name: horme_postgres_backups
+  postgres_logs:
+    driver: local
+    name: horme_postgres_logs
   redis_data:
     driver: local
-  nexus_logs:
+    name: horme_redis_data
+  redis_logs:
     driver: local
-  nexus_data:
+    name: horme_redis_logs
+  neo4j_data:
     driver: local
-  dataflow_logs:
+    name: horme_neo4j_data
+  neo4j_logs:
     driver: local
-  mcp_logs:
+    name: horme_neo4j_logs
+  neo4j_import:
     driver: local
-  classification_logs:
+    name: horme_neo4j_import
+  neo4j_plugins:
     driver: local
-  classification_models:
+    name: horme_neo4j_plugins
+  prometheus_data:
     driver: local
+    name: horme_prometheus_data
+  grafana_data:
+    driver: local
+    name: horme_grafana_data
+  api_logs:
+    driver: local
+    name: horme_api_logs
+  websocket_logs:
+    driver: local
+    name: horme_websocket_logs
   nginx_logs:
     driver: local
+    name: horme_nginx_logs
+  uploads:
+    driver: local
+    name: horme_uploads
+  mcp_logs:
+    driver: local
+    name: horme_mcp_logs
+  mcp_data:
+    driver: local
+    name: horme_mcp_data
+  email_attachments:
+    driver: local
+    name: horme_email_attachments
+  email_monitor_logs:
+    driver: local
+    name: horme_email_monitor_logs
+
+networks:
+  horme_network:
+    driver: bridge
+    name: horme_production_network
+
+# =============================================================================
+# PRODUCTION DEPLOYMENT COMMANDS:
+# =============================================================================
+# 
+# 1. Full Production Stack:
+#    docker-compose -f docker-compose.production.yml up -d
+# 
+# 2. Core Services Only:
+#    docker-compose -f docker-compose.production.yml up -d nginx api frontend postgres redis
+# 
+# 3. With Monitoring:
+#    docker-compose -f docker-compose.production.yml --profile monitoring up -d
+# 
+# 4. With Backup Service:
+#    docker-compose -f docker-compose.production.yml --profile backup up -d
+# 
+# 5. Health Check:
+#    docker-compose -f docker-compose.production.yml exec healthcheck sh
+# 
+# 6. View Logs:
+#    docker-compose -f docker-compose.production.yml logs -f api
+# 
+# 7. Scale Services:
+#    docker-compose -f docker-compose.production.yml up -d --scale api=3
+# 
+# 8. Rolling Update:
+#    docker-compose -f docker-compose.production.yml up -d --no-deps api
+# 
+# 9. Complete Shutdown:
+#    docker-compose -f docker-compose.production.yml down --volumes
+# 
+# =============================================================================

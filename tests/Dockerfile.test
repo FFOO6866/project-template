@@ -1,0 +1,40 @@
+# Dockerfile for Test Runner Service
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    postgresql-client \
+    redis-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy requirements first for better caching
+COPY requirements*.txt ./
+COPY tests/requirements-test.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-test.txt
+
+# Install Kailash SDK (development version)
+RUN pip install kailash
+
+# Copy test utilities
+COPY tests/ ./tests/
+
+# Set environment variables for testing
+ENV PYTHONPATH="/workspace:/workspace/src"
+ENV TESTING=1
+ENV PYTEST_TIMEOUT=300
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default command runs all tests
+CMD ["pytest", "tests/", "-v", "--tb=short", "--maxfail=10"]

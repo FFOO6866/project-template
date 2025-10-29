@@ -1,0 +1,279 @@
+time="2025-10-21T07:24:26+08:00" level=warning msg="C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\docker-compose.production.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+#1 [internal] load local bake definitions
+#1 reading from stdin 884B 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 2.63kB 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:18-alpine
+#3 ...
+
+#4 [auth] library/node:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:18-alpine
+#3 DONE 2.0s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 DONE 0.0s
+
+#7 [base 1/1] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#7 resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.1s done
+#7 DONE 0.1s
+
+#6 [internal] load build context
+#6 transferring context: 2.11MB 5.0s
+#6 transferring context: 3.05MB 7.6s done
+#6 DONE 8.9s
+
+#8 [deps 4/4] RUN   if [ -f package-lock.json ]; then npm ci --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile;   else echo "Lockfile not found." && exit 1;   fi
+#8 CACHED
+
+#9 [builder 1/5] WORKDIR /app
+#9 CACHED
+
+#10 [deps 1/4] RUN apk add --no-cache libc6-compat curl
+#10 CACHED
+
+#11 [deps 2/4] WORKDIR /app
+#11 CACHED
+
+#12 [deps 3/4] COPY package.json package-lock.json* pnpm-lock.yaml* ./
+#12 CACHED
+
+#13 [builder 2/5] COPY --from=deps /app/node_modules ./node_modules
+#13 CACHED
+
+#14 [builder 3/5] COPY . .
+#14 DONE 35.2s
+
+#15 [builder 4/5] RUN echo "/** @type {import('next').NextConfig} */" > next.config.mjs &&     echo "const nextConfig = {" >> next.config.mjs &&     echo "  output: 'standalone'," >> next.config.mjs &&     echo "  experimental: {" >> next.config.mjs &&     echo "    serverComponentsExternalPackages: []" >> next.config.mjs &&     echo "  }" >> next.config.mjs &&     echo "};" >> next.config.mjs &&     echo "" >> next.config.mjs &&     echo "export default nextConfig;" >> next.config.mjs
+#15 DONE 0.8s
+
+#16 [builder 5/5] RUN   if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo "Lockfile not found." && exit 1;   fi
+#16 2.222 
+#16 2.222 > my-v0-project@0.1.0 prebuild
+#16 2.222 > node validate-env.js
+#16 2.222 
+#16 2.337 
+#16 2.337 [36m=== Frontend Environment Configuration Validation ===[0m
+#16 2.339 [33m⚠️  .env.local not found. Copy .env.example to .env.local[0m
+#16 2.340 [34mℹ️  Run: cp .env.example .env.local[0m
+#16 2.340 
+#16 2.340 [34mℹ️  Environment: development[0m
+#16 2.340 
+#16 2.340 
+#16 2.340 [36m=== Required Configuration ===[0m
+#16 2.341 [32m✅ NEXT_PUBLIC_API_URL: Backend API URL[0m
+#16 2.341    Value: http://localhost:8002
+#16 2.342 [32m✅ NEXT_PUBLIC_WEBSOCKET_URL: WebSocket Server URL[0m
+#16 2.342    Value: ws://localhost:8001
+#16 2.343 
+#16 2.343 [36m=== Optional Configuration ===[0m
+#16 2.343 [32m✅ NEXT_PUBLIC_MCP_URL: MCP Server URL[0m
+#16 2.343    Value: ws://localhost:3004
+#16 2.344 [33m⚠️  NEXT_PUBLIC_MAX_FILE_SIZE: Using default (50MB)[0m
+#16 2.344 [33m⚠️  NEXT_PUBLIC_ALLOWED_FILE_EXTENSIONS: No file extensions specified[0m
+#16 2.345 
+#16 2.345 [36m=== Environment-Specific Checks (development) ===[0m
+#16 2.345 [32m✅ API URL should point to localhost or Docker service in development[0m
+#16 2.345 
+#16 2.345 [36m=== Configuration Consistency ===[0m
+#16 2.345 
+#16 2.345 [36m=== Feature Flags ===[0m
+#16 2.345 [32m✅ Enabled features: CHAT, UPLOAD, REPORTS, AI_RECOMMENDATIONS, NOTIFICATIONS, SEARCH, QUOTATIONS[0m
+#16 2.346 
+#16 2.346 [36m=== Validation Summary ===[0m
+#16 2.347 [33m⚠️  Found 2 warning(s)[0m
+#16 2.348 
+#16 2.348 [32m✅ Configuration validation completed.[0m
+#16 2.363 
+#16 2.363 > my-v0-project@0.1.0 build
+#16 2.363 > next build
+#16 2.363 
+#16 4.580  ⚠ Invalid next.config.mjs options detected: 
+#16 4.581  ⚠     Unrecognized key(s) in object: 'serverComponentsExternalPackages' at "experimental"
+#16 4.581  ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+#16 4.584  ⚠ `experimental.serverComponentsExternalPackages` has been moved to `serverExternalPackages`. Please update your next.config.mjs file accordingly.
+#16 4.626 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#16 4.626 This information is used to shape Next.js' roadmap and prioritize features.
+#16 4.626 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#16 4.626 https://nextjs.org/telemetry
+#16 4.626 
+#16 4.816    ▲ Next.js 15.2.4
+#16 4.816 
+#16 4.960    Creating an optimized production build ...
+#16 6.489  ⚠ Found lockfile missing swc dependencies, patching...
+#16 7.092    Downloading swc package @next/swc-linux-x64-gnu... to /root/.cache/next-swc
+#16 11.04  ⚠ Lockfile was successfully patched, please run "npm install" to ensure @next/swc dependencies are downloaded
+#16 17.23    Downloading swc package @next/swc-linux-x64-musl... to /root/.cache/next-swc
+#16 50.14  ✓ Compiled successfully
+#16 50.21    Linting and checking validity of types ...
+#16 68.85 Failed to compile.
+#16 68.85 
+#16 68.85 ./tests/setup/jest.setup.ts:13:1
+#16 68.85 Type error: Type 'typeof TextEncoder' is not assignable to type '{ new (): TextEncoder; prototype: TextEncoder; }'.
+#16 68.85   The types returned by 'prototype.encode(...)' are incompatible between these types.
+#16 68.85     Type 'Uint8Array<ArrayBufferLike>' is not assignable to type 'Uint8Array<ArrayBuffer>'.
+#16 68.85       Type 'ArrayBufferLike' is not assignable to type 'ArrayBuffer'.
+#16 68.85         Type 'SharedArrayBuffer' is missing the following properties from type 'ArrayBuffer': resizable, resize, detached, transfer, transferToFixedLength
+#16 68.85 
+#16 68.85 [0m [90m 11 |[39m[0m
+#16 68.85 [0m [90m 12 |[39m [90m// Polyfill for TextEncoder/TextDecoder[39m[0m
+#16 68.85 [0m[31m[1m>[22m[39m[90m 13 |[39m global[33m.[39m[33mTextEncoder[39m [33m=[39m [33mTextEncoder[39m[0m
+#16 68.85 [0m [90m    |[39m [31m[1m^[22m[39m[0m
+#16 68.85 [0m [90m 14 |[39m global[33m.[39m[33mTextDecoder[39m [33m=[39m [33mTextDecoder[39m [36mas[39m any[0m
+#16 68.85 [0m [90m 15 |[39m[0m
+#16 68.85 [0m [90m 16 |[39m [90m// Environment variable defaults for tests[39m[0m
+#16 68.95 Next.js build worker exited with code: 1 and signal: null
+#16 69.16 npm notice
+#16 69.16 npm notice New major version of npm available! 10.8.2 -> 11.6.2
+#16 69.16 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+#16 69.16 npm notice To update run: npm install -g npm@11.6.2
+#16 69.16 npm notice
+#16 ERROR: process "/bin/sh -c if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo \"Lockfile not found.\" && exit 1;   fi" did not complete successfully: exit code: 1
+------
+ > [builder 5/5] RUN   if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo "Lockfile not found." && exit 1;   fi:
+68.85 [0m [90m    |[39m [31m[1m^[22m[39m[0m
+68.85 [0m [90m 14 |[39m global[33m.[39m[33mTextDecoder[39m [33m=[39m [33mTextDecoder[39m [36mas[39m any[0m
+68.85 [0m [90m 15 |[39m[0m
+68.85 [0m [90m 16 |[39m [90m// Environment variable defaults for tests[39m[0m
+68.95 Next.js build worker exited with code: 1 and signal: null
+69.16 npm notice
+69.16 npm notice New major version of npm available! 10.8.2 -> 11.6.2
+69.16 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+69.16 npm notice To update run: npm install -g npm@11.6.2
+69.16 npm notice
+------
+Dockerfile:45
+
+--------------------
+
+  44 |     
+
+  45 | >>> RUN \
+
+  46 | >>>   if [ -f package-lock.json ]; then npm run build --legacy-peer-deps; \
+
+  47 | >>>   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+
+  48 | >>>   else echo "Lockfile not found." && exit 1; \
+
+  49 | >>>   fi
+
+  50 |     
+
+--------------------
+
+failed to solve: process "/bin/sh -c if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo \"Lockfile not found.\" && exit 1;   fi" did not complete successfully: exit code: 1
+
+369  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json --containerd /run/containerd/containerd.sock --pidfile /run/desktop/docker.pid --swarm-default-advertise-addr=192.168.65.3 --host-gateway-ip 192.168.65.254 --allow-direct-routing
+
+github.com/moby/buildkit/executor/runcexecutor.exitError
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/executor/runcexecutor/executor.go:391
+
+github.com/moby/buildkit/executor/runcexecutor.(*runcExecutor).Run
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/executor/runcexecutor/executor.go:339
+
+github.com/moby/buildkit/solver/llbsolver/ops.(*ExecOp).Exec
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/exec.go:497
+
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1120
+
+github.com/moby/buildkit/util/flightcontrol.(*call[...]).run
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/util/flightcontrol/flightcontrol.go:122
+
+sync.(*Once).doSlow
+
+	/usr/local/go/src/sync/once.go:78
+
+sync.(*Once).Do
+
+	/usr/local/go/src/sync/once.go:69
+
+runtime.goexit
+
+	/usr/local/go/src/runtime/asm_amd64.s:1700
+
+
+
+22656 v0.28.0-desktop.1 C:\Program Files\Docker\cli-plugins\docker-buildx.exe bake --file - --progress rawjson --metadata-file C:\Users\fujif\AppData\Local\Temp\compose-build-metadataFile-57465515.json --allow fs.read=C:\Users\fujif\OneDrive\Documents\GitHub\horme-pov\frontend
+
+google.golang.org/grpc.(*ClientConn).Invoke
+
+	google.golang.org/grpc@v1.72.2/call.go:35
+
+github.com/moby/buildkit/api/services/control.(*controlClient).Solve
+
+	github.com/moby/buildkit@v0.24.0/api/services/control/control_grpc.pb.go:88
+
+github.com/moby/buildkit/client.(*Client).solve.func2
+
+	github.com/moby/buildkit@v0.24.0/client/solve.go:278
+
+golang.org/x/sync/errgroup.(*Group).Go.func1
+
+	golang.org/x/sync@v0.16.0/errgroup/errgroup.go:93
+
+runtime.goexit
+
+	runtime/asm_amd64.s:1700
+
+
+
+369  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json --containerd /run/containerd/containerd.sock --pidfile /run/desktop/docker.pid --swarm-default-advertise-addr=192.168.65.3 --host-gateway-ip 192.168.65.254 --allow-direct-routing
+
+github.com/moby/buildkit/solver.(*edge).execOp
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/edge.go:963
+
+github.com/moby/buildkit/solver/internal/pipe.NewWithFunction[...].func2
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/internal/pipe/pipe.go:78
+
+runtime.goexit
+
+	/usr/local/go/src/runtime/asm_amd64.s:1700
+
+
+
+22656 v0.28.0-desktop.1 C:\Program Files\Docker\cli-plugins\docker-buildx.exe bake --file - --progress rawjson --metadata-file C:\Users\fujif\AppData\Local\Temp\compose-build-metadataFile-57465515.json --allow fs.read=C:\Users\fujif\OneDrive\Documents\GitHub\horme-pov\frontend
+
+github.com/moby/buildkit/client.(*Client).solve.func2
+
+	github.com/moby/buildkit@v0.24.0/client/solve.go:295
+
+golang.org/x/sync/errgroup.(*Group).Go.func1
+
+	golang.org/x/sync@v0.16.0/errgroup/errgroup.go:93
+
+
+
+369  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json --containerd /run/containerd/containerd.sock --pidfile /run/desktop/docker.pid --swarm-default-advertise-addr=192.168.65.3 --host-gateway-ip 192.168.65.254 --allow-direct-routing
+
+github.com/moby/buildkit/solver/llbsolver/ops.(*ExecOp).Exec
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/exec.go:518
+
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1120
+
+
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/v4ncgwqsxyn7z6g4tz4pils47
+

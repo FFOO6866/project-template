@@ -1,0 +1,16 @@
+# Phase 5: Multi-lingual Translation System Requirements
+# ========================================================
+# Production-ready translation service with OpenAI GPT-4
+
+# Core Translation
+openai>=1.0.0                    # OpenAI GPT-4 API client
+langdetect>=1.0.9                # Language auto-detection
+redis>=5.0.0                     # Redis caching client
+
+# Optional (Enhanced Language Detection)
+fasttext>=0.9.2                  # Facebook's language detection (optional, improves accuracy)
+
+# Already included in main requirements
+# pydantic>=2.0.0                # Data validation (from src/core/config.py)
+# fastapi>=0.104.0               # API framework (from src/production_api_server.py)
+# psycopg2-binary>=2.9.0         # PostgreSQL driver (from src/core/postgresql_database.py)

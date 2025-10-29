@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-08-27T18:29:34.075522",
+  "services": {
+    "docker_daemon": {
+      "success": true,
+      "message": "Docker daemon is running",
+      "timestamp": "2025-08-27T18:29:34.192563"
+    },
+    "container_postgres": {
+      "success": false,
+      "message": "Container horme-postgres not found",
+      "timestamp": "2025-08-27T18:29:34.259909"
+    },
+    "container_redis": {
+      "success": false,
+      "message": "Container horme-redis not found",
+      "timestamp": "2025-08-27T18:29:34.259909"
+    },
+    "container_api": {
+      "success": false,
+      "message": "Container horme-api not found",
+      "timestamp": "2025-08-27T18:29:34.259909"
+    },
+    "container_mcp": {
+      "success": false,
+      "message": "Container horme-mcp not found",
+      "timestamp": "2025-08-27T18:29:34.259909"
+    },
+    "container_frontend": {
+      "success": false,
+      "message": "Container horme-frontend not found",
+      "timestamp": "2025-08-27T18:29:34.259909"
+    },
+    "container_nexus": {
+      "success": false,
+      "message": "Container horme-nexus not found",
+      "timestamp": "2025-08-27T18:29:34.259909"
+    },
+    "port_postgres": {
+      "success": false,
+      "message": "Port 5433 is not accessible",
+      "timestamp": "2025-08-27T18:29:36.296801"
+    },
+    "port_redis": {
+      "success": false,
+      "message": "Port 6380 is not accessible",
+      "timestamp": "2025-08-27T18:29:38.335834"
+    },
+    "port_api": {
+      "success": true,
+      "message": "Port 8000 is accessible",
+      "timestamp": "2025-08-27T18:29:38.337440"
+    },
+    "port_mcp": {
+      "success": true,
+      "message": "Port 3002 is accessible",
+      "timestamp": "2025-08-27T18:29:38.338443"
+    },
+    "port_frontend": {
+      "success": false,
+      "message": "Port 3000 is not accessible",
+      "timestamp": "2025-08-27T18:29:40.371006"
+    },
+    "port_nexus": {
+      "success": false,
+      "message": "Port 8080 is not accessible",
+      "timestamp": "2025-08-27T18:29:42.418156"
+    }
+  },
+  "summary": {
+    "total_checked": 13,
+    "healthy": 3,
+    "unhealthy": 10,
+    "overall_status": "UNHEALTHY"
+  }
+}

@@ -1,0 +1,189 @@
+# Prometheus Configuration for MCP Server Monitoring
+# Comprehensive metrics collection for production deployment
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    cluster: 'mcp-cluster'
+    replica: 'prometheus-1'
+
+# Rule files for alerting
+rule_files:
+  - "rules/*.yml"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      scheme: http
+      timeout: 10s
+      api_version: v2
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scheme: http
+
+  # MCP Server instances
+  - job_name: 'mcp-server'
+    static_configs:
+      - targets:
+        - 'mcp-server-1:9090'
+        - 'mcp-server-2:9090'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: /metrics
+    scheme: http
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 'mcp-server:9090'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'mcp_.*'
+        target_label: service
+        replacement: 'mcp-server'
+
+  # HAProxy load balancer
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['load-balancer:8404']
+    scrape_interval: 15s
+    metrics_path: /stats
+    params:
+      stats: ['prometheus']
+    scheme: http
+
+  # PostgreSQL database
+  - job_name: 'postgres'
+    static_configs:
+      - targets:
+        - 'postgres-primary:5432'
+        - 'postgres-replica:5432'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.*):(.*)'  
+        target_label: 'instance'
+        replacement: '${1}'
+      - source_labels: [__address__]
+        regex: 'postgres-primary:.*'
+        target_label: 'role'
+        replacement: 'primary'
+      - source_labels: [__address__]
+        regex: 'postgres-replica:.*'
+        target_label: 'role'
+        replacement: 'replica'
+
+  # Redis cache
+  - job_name: 'redis'
+    static_configs:
+      - targets:
+        - 'redis-master:6379'
+        - 'redis-replica:6379'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'redis-master:.*'
+        target_label: 'role'
+        replacement: 'master'
+      - source_labels: [__address__]
+        regex: 'redis-replica:.*'
+        target_label: 'role'
+        replacement: 'replica'
+
+  # RabbitMQ message queue
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  # Jaeger tracing
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  # Node exporter for system metrics (if available)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+        - 'node-exporter:9100'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  # cAdvisor for container metrics (if available)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+    metric_relabel_configs:
+      - source_labels: [container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [container_label_com_docker_compose_project]
+        target_label: project
+
+  # Docker daemon metrics (if available)
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+# Remote write configuration (for long-term storage)
+# remote_write:
+#   - url: "https://prometheus-remote-storage.example.com/api/v1/write"
+#     queue_config:
+#       max_samples_per_send: 1000
+#       max_shards: 200
+#       capacity: 2500
+
+# Remote read configuration (for querying historical data)
+# remote_read:
+#   - url: "https://prometheus-remote-storage.example.com/api/v1/read"
+#     read_recent: true
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true
+
+# Web configuration
+web:
+  console.libraries: /etc/prometheus/console_libraries
+  console.templates: /etc/prometheus/consoles
+  enable-lifecycle: true
+  enable-admin-api: true
+  max-connections: 512
+  read-timeout: 30s
+  route-prefix: /
+  external-url: http://prometheus:9090

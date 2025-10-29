@@ -1,0 +1,63 @@
+{
+  "mapping_summary": "Maps database product categories to Horme website category URLs",
+  "total_expected_products": 17266,
+  "categories": [
+    {
+      "database_code": "21",
+      "database_name": "Safety Products",
+      "database_count": 9129,
+      "website_categories": [
+        {
+          "name": "PPE Safety Equipment",
+          "url": "category.aspx?c=18",
+          "type": "main_category"
+        }
+      ]
+    },
+    {
+      "database_code": "09",
+      "database_name": "Electrical Power Tools",
+      "database_count": 4927,
+      "website_categories": [
+        {
+          "name": "Power Tools - Corded",
+          "url": "category.aspx?c=1",
+          "type": "main_category"
+        },
+        {
+          "name": "Power Tools - Cordless",
+          "url": "category.aspx?c=50",
+          "type": "main_category"
+        },
+        {
+          "name": "Power Tools - Accessories",
+          "url": "category.aspx?c=9",
+          "type": "main_category"
+        }
+      ]
+    },
+    {
+      "database_code": "05",
+      "database_name": "Cleaning Products",
+      "database_count": 3210,
+      "website_categories": [
+        {
+          "name": "Cleaning Products",
+          "url": "category.aspx?c=7",
+          "type": "main_category"
+        }
+      ]
+    }
+  ],
+  "scraping_strategy": {
+    "description": "Scrape all 5 main category URLs to capture all products",
+    "total_categories_to_scrape": 5,
+    "categories_to_scrape": [
+      "category.aspx?c=18",
+      "category.aspx?c=1",
+      "category.aspx?c=50",
+      "category.aspx?c=9",
+      "category.aspx?c=7"
+    ]
+  }
+}

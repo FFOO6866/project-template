@@ -1,0 +1,26 @@
+Usage: ./scripts/run-complete-validation.sh [OPTIONS]
+
+Complete UV Migration Validation Orchestrator
+
+Options:
+    --fast              Skip optional checks (faster execution)
+    --ci                CI/CD mode (minimal output)
+    --stop-on-fail      Stop on first failure
+    --skip-docker       Skip Docker build validation
+    --skip-security     Skip security scans
+    --verbose, -v       Enable verbose output
+    --help, -h          Show this help message
+
+Examples:
+    ./scripts/run-complete-validation.sh                      # Full validation
+    ./scripts/run-complete-validation.sh --fast               # Quick validation
+    ./scripts/run-complete-validation.sh --ci                 # CI/CD pipeline
+    ./scripts/run-complete-validation.sh --stop-on-fail       # Fail fast mode
+
+Exit codes:
+    0 - All validations passed
+    1 - UV setup failed
+    2 - Docker build failed
+    3 - Production validation failed
+    4 - Configuration validation failed
+    5 - Multiple failures

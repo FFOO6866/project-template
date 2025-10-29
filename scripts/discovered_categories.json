@@ -1,0 +1,26 @@
+{
+  "safety": {
+    "name": "Safety Products",
+    "code": "21",
+    "category_id": "18",
+    "url": "category.aspx?c=18",
+    "expected_products": 9129,
+    "products_on_first_page": 57
+  },
+  "power_tools": {
+    "name": "Electrical Power Tools",
+    "code": "09",
+    "category_id": "86",
+    "url": "products.aspx?c=86",
+    "expected_products": 4927,
+    "products_on_first_page": 97
+  },
+  "cleaning": {
+    "name": "Cleaning Products",
+    "code": "05",
+    "category_id": "7",
+    "url": "category.aspx?c=7",
+    "expected_products": 3210,
+    "products_on_first_page": 32
+  }
+}

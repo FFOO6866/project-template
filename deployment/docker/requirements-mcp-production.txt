@@ -1,0 +1,75 @@
+# Production MCP Server Dependencies
+# Core Kailash SDK with all features
+kailash[full]==0.9.9
+
+# Enhanced transport support
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+websockets==12.0
+sse-starlette==1.6.5
+
+# Authentication & Security
+PyJWT[crypto]==2.8.0
+cryptography==41.0.7
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Database connectivity
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis[hiredis]==5.0.1
+sqlalchemy[asyncio]==2.0.23
+alembic==1.12.1
+
+# Monitoring & Observability
+prometheus-client==0.19.0
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
+opentelemetry-instrumentation-fastapi==0.42b0
+opentelemetry-instrumentation-asyncpg==0.42b0
+opentelemetry-instrumentation-redis==0.42b0
+opentelemetry-exporter-prometheus==1.12.0rc1
+structlog==23.2.0
+
+# Circuit breaker & resilience
+circuitbreaker==1.4.0
+tenacity==8.2.3
+limiter==0.3.1
+
+# Message queuing
+celery[redis]==5.3.4
+aio-pika==9.3.1
+
+# Configuration management
+pydantic==2.5.0
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# HTTP client for health checks
+httpx==0.25.2
+aiofiles==23.2.1
+
+# Development and testing (conditional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Performance profiling
+memory-profiler==0.61.0
+psutil==5.9.6
+
+# JSON processing
+orjson==3.9.10
+
+# Validation and serialization
+marshmallow==3.20.1
+
+# Distributed coordination
+konsul==0.1.1
+
+# Container orchestration support
+kubernetes==28.1.0

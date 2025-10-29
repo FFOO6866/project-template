@@ -1,0 +1,13 @@
+{
+  "page_number": 140,
+  "timestamp": 1761172238.695518,
+  "stats": {
+    "pages_processed": 140,
+    "products_extracted": 775,
+    "products_with_prices": 775,
+    "products_updated_in_db": 0,
+    "products_not_in_db": 775,
+    "errors": 0,
+    "start_time": 1761171931.2529378
+  }
+}

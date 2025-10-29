@@ -175,9 +175,9 @@ def setup_postgres(config):
         f"-e POSTGRES_DB={database_name} "
         f"-e POSTGRES_USER=test_user "
         f"-e POSTGRES_PASSWORD=test_password "
-        f'-e POSTGRES_INITDB_ARGS="-c shared_buffers=256MB -c max_connections=200" '
+        f"-e POSTGRES_HOST_AUTH_METHOD=trust "
         f"-p {config['postgres_port']}:5432 "
-        f"--health-cmd 'pg_isready -U test_user -d {database_name}' "
+        f'--health-cmd "pg_isready -U test_user -d {database_name}" '
         f"--health-interval 10s "
         f"--health-timeout 5s "
         f"--health-retries 5 "
@@ -192,8 +192,7 @@ def setup_postgres(config):
     # Create test database and schema
     print("Setting up test database...")
     run_command(
-        f"docker exec {container_name} psql -U test_user -d {database_name} -c "
-        f"'CREATE SCHEMA IF NOT EXISTS public;'"
+        f'docker exec {container_name} psql -U test_user -d {database_name} -c "CREATE SCHEMA IF NOT EXISTS public;"'
     )
 
     return True
@@ -241,7 +240,7 @@ def setup_redis(config):
         f"docker run -d "
         f"--name {container_name} "
         f"-p {config['redis_port']}:6379 "
-        f"--health-cmd 'redis-cli ping' "
+        f'--health-cmd "redis-cli --raw ping" '
         f"--health-interval 10s "
         f"--health-timeout 5s "
         f"--health-retries 5 "
@@ -494,12 +493,10 @@ def main():
     # Create network
     create_network(config)
 
-    # Setup all containers
+    # Setup essential containers for quotation testing
     services = [
         ("PostgreSQL", setup_postgres),
-        ("MySQL", setup_mysql),
         ("Redis", setup_redis),
-        ("Ollama", setup_ollama),
     ]
 
     for service_name, setup_func in services:

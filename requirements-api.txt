@@ -1,0 +1,120 @@
+# Horme POV Production API Requirements
+# Production-only dependencies for API server
+# ==============================================================================
+
+# Core Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database - PostgreSQL
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+alembic==1.13.1
+
+# Database - Neo4j Knowledge Graph
+neo4j==5.16.0
+
+# Cache - Redis
+redis==5.0.1
+hiredis==2.3.2
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+cryptography==42.0.0
+pyjwt==2.8.0
+
+# OpenAI LLM Integration
+openai==1.51.2
+
+# NLP & ML Libraries
+sentence-transformers==2.3.1
+transformers==4.37.0
+torch==2.1.2
+scikit-learn==1.4.0
+numpy==1.26.3
+pandas==2.1.4
+
+# Vector Database & Embeddings
+chromadb==0.4.22
+langchain==0.1.0
+langchain-openai==0.0.5
+
+# Data Processing
+openpyxl==3.1.2
+xlsxwriter==3.1.9
+python-dateutil==2.8.2
+
+# Document Processing & PDF Generation
+PyPDF2==3.0.1  # PDF text extraction fallback
+pdfplumber==0.11.0  # PDF text and table extraction
+camelot-py[cv]==0.11.0  # PDF table extraction (bordered tables)
+python-docx==1.1.0  # DOCX file support
+reportlab==4.0.9  # PDF generation
+pdf2image==1.17.0  # PDF to image conversion for GPT-4 Vision
+pillow==10.3.0  # Image processing
+docling>=0.1.0  # IBM multi-format document parser (Phase 2)
+# unstructured[local-inference]>=0.11.0  # Alternative multi-format parser (optional)
+
+# HTTP & API Clients
+httpx==0.26.0
+requests==2.31.0
+aiohttp==3.9.1
+
+# Logging & Monitoring
+structlog==24.1.0
+python-json-logger==2.0.7
+prometheus-client==0.19.0
+
+# Configuration
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# WebSocket Support
+websockets==12.0
+python-socketio==5.11.0
+
+# Background Tasks
+celery==5.3.6
+
+# Utilities
+tenacity==8.2.3
+cachetools==5.3.2
+python-slugify==8.0.1
+pytz==2024.1
+ujson==5.9.0
+orjson==3.9.12
+
+# Production WSGI Server
+gunicorn==21.2.0
+
+# Environment & Process Management
+supervisor==4.2.5
+
+# Data Validation
+email-validator==2.1.0
+phonenumbers==8.13.27
+
+# Rate Limiting
+slowapi==0.1.9
+
+# CORS
+fastapi-cors==0.0.6
+
+# Health Checks
+py-healthcheck==1.10.1
+
+# Metrics
+statsd==4.0.1
+
+# ==============================================================================
+# PRODUCTION NOTES:
+# ==============================================================================
+# This file contains ONLY production dependencies for the API server.
+# Development dependencies (testing, code quality) are excluded.
+# Used by Dockerfile.api for production image builds.
+# ==============================================================================

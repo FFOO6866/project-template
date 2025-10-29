@@ -1,0 +1,131 @@
+# Production-Grade MCP Server Container
+# Multi-stage build with security hardening and production optimizations
+
+# Build stage
+FROM python:3.11-slim as builder
+
+# Set build environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements and install dependencies
+COPY requirements-mcp-production.txt /tmp/
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /tmp/requirements-mcp-production.txt
+
+# Production stage
+FROM python:3.11-slim as production
+
+# Production environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies and security updates
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libssl3 \
+    ca-certificates \
+    curl \
+    dumb-init \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user with specific UID/GID for security
+RUN groupadd -g 1001 mcp && \
+    useradd -r -u 1001 -g mcp -d /app -s /sbin/nologin \
+    -c "MCP Server User" mcp
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Create application directory structure
+WORKDIR /app
+RUN mkdir -p /app/{logs,data,config,tmp} && \
+    chown -R mcp:mcp /app
+
+# Copy application code with proper ownership
+COPY --chown=mcp:mcp deployment/docker/services/production_mcp_server.py /app/
+COPY --chown=mcp:mcp deployment/docker/config/ /app/config/
+COPY --chown=mcp:mcp deployment/docker/scripts/ /app/scripts/
+
+# Copy health check script
+COPY --chown=mcp:mcp deployment/docker/scripts/health_check.py /app/health_check.py
+
+# Set proper permissions
+RUN chmod +x /app/scripts/*.sh && \
+    chmod 755 /app/production_mcp_server.py && \
+    chmod 755 /app/health_check.py
+
+# Switch to non-root user
+USER mcp
+
+# Expose ports
+EXPOSE 3001 3002 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python /app/health_check.py || exit 1
+
+# Resource limits (can be overridden by orchestrator)
+ENV MCP_MAX_MEMORY=512M \
+    MCP_MAX_CPU=0.5
+
+# Security settings
+ENV MCP_SECURE_HEADERS=true \
+    MCP_RATE_LIMIT_ENABLED=true \
+    MCP_AUDIT_LOGGING=true
+
+# Production configuration defaults
+ENV MCP_ENVIRONMENT=production \
+    MCP_LOG_LEVEL=INFO \
+    MCP_WORKER_THREADS=4 \
+    MCP_CONNECTION_POOL_SIZE=20 \
+    MCP_REQUEST_TIMEOUT=30 \
+    MCP_WEBSOCKET_TIMEOUT=60 \
+    MCP_ENABLE_METRICS=true \
+    MCP_ENABLE_TRACING=true
+
+# Transport configuration
+ENV MCP_STDIO_ENABLED=true \
+    MCP_HTTP_ENABLED=true \
+    MCP_WEBSOCKET_ENABLED=true \
+    MCP_SSE_ENABLED=true
+
+# Security configuration
+ENV MCP_JWT_ALGORITHM=RS256 \
+    MCP_TOKEN_EXPIRY=3600 \
+    MCP_REFRESH_TOKEN_EXPIRY=86400 \
+    MCP_CORS_ENABLED=true
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["python", "/app/production_mcp_server.py"]
+
+# Labels for metadata
+LABEL maintainer="Kailash SDK Team" \
+      version="1.0.0" \
+      description="Production-grade MCP server with enterprise features" \
+      service="mcp-server" \
+      tier="production"

@@ -1,0 +1,238 @@
+{
+  "timestamp": "2025-08-05 23:11:59",
+  "overall_status": "PASSED",
+  "metrics": {
+    "classification_accuracy": 95.45454545454545,
+    "avg_response_time_ms": 0.04557046023282138,
+    "max_response_time_ms": 1.0025501251220703,
+    "under_500ms_percent": 100.0,
+    "avg_entities_per_query": 3.5
+  },
+  "requirements": {
+    "accuracy_requirement": true,
+    "performance_requirement": true,
+    "entity_requirement": true
+  },
+  "detailed_results": [
+    {
+      "query": "I want to renovate my bathroom",
+      "expected": "project_planning",
+      "predicted": "project_planning",
+      "confidence": 0.38461538461538464,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 4,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Planning to install new kitchen cabinets",
+      "expected": "project_planning",
+      "predicted": "project_planning",
+      "confidence": 0.46153846153846156,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 4,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Thinking of building a deck",
+      "expected": "project_planning",
+      "predicted": "project_planning",
+      "confidence": 0.5384615384615384,
+      "correct": true,
+      "entities_count": 0,
+      "expansion_terms": 2,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Design a storage system for bedroom",
+      "expected": "project_planning",
+      "predicted": "project_planning",
+      "confidence": 0.15384615384615385,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "fix squeaky floors urgently",
+      "expected": "problem_solving",
+      "predicted": "problem_solving",
+      "confidence": 0.5217391304347826,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 2,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "My faucet is leaking badly",
+      "expected": "problem_solving",
+      "predicted": "problem_solving",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Emergency toilet repair needed",
+      "expected": "problem_solving",
+      "predicted": "problem_solving",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Broken door handle stuck",
+      "expected": "problem_solving",
+      "predicted": "problem_solving",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 2,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "best drill for concrete work",
+      "expected": "tool_selection",
+      "predicted": "tool_selection",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 2,
+      "expansion_terms": 2,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "What saw do I need for wood",
+      "expected": "tool_selection",
+      "predicted": "tool_selection",
+      "confidence": 0.6086956521739131,
+      "correct": true,
+      "entities_count": 2,
+      "expansion_terms": 2,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Recommend hammer for DIY projects",
+      "expected": "tool_selection",
+      "predicted": "tool_selection",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Which screwdriver set is good",
+      "expected": "tool_selection",
+      "predicted": "tool_selection",
+      "confidence": 0.2608695652173913,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "DeWalt vs Makita drill comparison",
+      "expected": "product_comparison",
+      "predicted": "product_comparison",
+      "confidence": 0.8571428571428571,
+      "correct": true,
+      "entities_count": 3,
+      "expansion_terms": 2,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Compare Bosch and Ryobi tools",
+      "expected": "product_comparison",
+      "predicted": "product_comparison",
+      "confidence": 0.38095238095238093,
+      "correct": true,
+      "entities_count": 2,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Which is better Stanley or Milwaukee",
+      "expected": "product_comparison",
+      "predicted": "product_comparison",
+      "confidence": 0.38095238095238093,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "how to install bathroom tiles",
+      "expected": "learning",
+      "predicted": "learning",
+      "confidence": 0.25,
+      "correct": true,
+      "entities_count": 2,
+      "expansion_terms": 4,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Learn to use circular saw safely",
+      "expected": "learning",
+      "predicted": "tool_selection",
+      "confidence": 0.34782608695652173,
+      "correct": false,
+      "entities_count": 1,
+      "expansion_terms": 2,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Tutorial for wall painting technique",
+      "expected": "learning",
+      "predicted": "learning",
+      "confidence": 0.25,
+      "correct": true,
+      "entities_count": 0,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "Step by step plumbing guide",
+      "expected": "learning",
+      "predicted": "learning",
+      "confidence": 0.5,
+      "correct": true,
+      "entities_count": 0,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "renovate HDB bathroom with approval",
+      "expected": "project_planning",
+      "predicted": "project_planning",
+      "confidence": 0.3076923076923077,
+      "correct": true,
+      "entities_count": 2,
+      "expansion_terms": 4,
+      "processing_time_ms": 0.0
+    },
+    {
+      "query": "fix aircon in tropical weather",
+      "expected": "problem_solving",
+      "predicted": "problem_solving",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 2,
+      "processing_time_ms": 1.0025501251220703
+    },
+    {
+      "query": "tools for void deck renovation",
+      "expected": "tool_selection",
+      "predicted": "tool_selection",
+      "confidence": 0.34782608695652173,
+      "correct": true,
+      "entities_count": 1,
+      "expansion_terms": 0,
+      "processing_time_ms": 0.0
+    }
+  ]
+}

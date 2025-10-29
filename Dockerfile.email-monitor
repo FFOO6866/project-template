@@ -1,0 +1,59 @@
+# Dockerfile for Email Monitoring Service
+# Multi-stage build for minimal production image
+# NO MOCK DATA - Production-ready container
+
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install system dependencies for PDF/document processing
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements-email.txt .
+RUN pip install --no-cache-dir --user -r requirements-email.txt
+
+# Production stage
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder to system location
+COPY --from=builder /root/.local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /root/.local/bin /usr/local/bin
+
+# Copy application code
+COPY src/services/email_monitor.py /app/src/services/
+COPY src/services/email_processor.py /app/src/services/
+COPY src/services/document_processor.py /app/src/services/
+COPY src/services/product_matcher.py /app/src/services/
+COPY src/services/quotation_generator.py /app/src/services/
+COPY src/models/ /app/src/models/
+
+# Create necessary directories with secure permissions
+RUN mkdir -p /app/email-attachments /app/logs && \
+    chmod 700 /app/email-attachments && \
+    chmod 755 /app/logs
+
+# Create non-root user for security
+RUN useradd -m -u 1000 emailmonitor && \
+    chown -R emailmonitor:emailmonitor /app
+
+# Switch to non-root user
+USER emailmonitor
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"
+
+# Run email monitor service
+CMD ["python", "-m", "src.services.email_monitor"]

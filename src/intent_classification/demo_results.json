@@ -1,0 +1,85 @@
+[
+  {
+    "query": "I want to renovate my bathroom",
+    "intent": "project_planning",
+    "confidence": 0.38461538461538464,
+    "entities": [
+      {
+        "type": "room_location",
+        "value": "bathroom",
+        "confidence": 0.8
+      }
+    ],
+    "expansion_terms": [
+      "remodel",
+      "upgrade",
+      "toilet",
+      "washroom"
+    ]
+  },
+  {
+    "query": "fix squeaky floors",
+    "intent": "problem_solving",
+    "confidence": 0.34782608695652173,
+    "entities": [],
+    "expansion_terms": [
+      "repair",
+      "mend"
+    ]
+  },
+  {
+    "query": "DeWalt vs Makita drill",
+    "intent": "product_comparison",
+    "confidence": 0.6666666666666666,
+    "entities": [
+      {
+        "type": "tool_category",
+        "value": "drill",
+        "confidence": 0.8
+      },
+      {
+        "type": "brand",
+        "value": "dewalt",
+        "confidence": 0.8
+      },
+      {
+        "type": "brand",
+        "value": "makita",
+        "confidence": 0.8
+      }
+    ],
+    "expansion_terms": [
+      "boring machine",
+      "power drill"
+    ]
+  },
+  {
+    "query": "how to install tiles",
+    "intent": "learning",
+    "confidence": 0.25,
+    "entities": [
+      {
+        "type": "material_type",
+        "value": "tile",
+        "confidence": 0.8
+      }
+    ],
+    "expansion_terms": [
+      "mount",
+      "set up"
+    ]
+  },
+  {
+    "query": "best budget tools for DIY",
+    "intent": "tool_selection",
+    "confidence": 0.5217391304347826,
+    "entities": [
+      {
+        "type": "budget_range",
+        "value": "budget",
+        "confidence": 0.8
+      }
+    ],
+    "expansion_terms": []
+  }
+]

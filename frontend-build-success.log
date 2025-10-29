@@ -1,0 +1,345 @@
+time="2025-10-21T07:09:33+08:00" level=warning msg="C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\docker-compose.production.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+#1 [internal] load local bake definitions
+#1 reading from stdin 908B 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 2.63kB 0.0s done
+#2 DONE 0.0s
+
+#3 [auth] library/node:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#4 [internal] load metadata for docker.io/library/node:18-alpine
+#4 DONE 1.8s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [base 1/1] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#6 resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.0s done
+#6 CACHED
+
+#7 [builder 1/5] WORKDIR /app
+#7 CACHED
+
+#8 [internal] load build context
+#8 ...
+
+#9 [runner 2/9] RUN addgroup --system --gid 1001 nodejs
+#9 DONE 0.5s
+
+#8 [internal] load build context
+#8 ...
+
+#10 [runner 3/9] RUN adduser --system --uid 1001 nextjs
+#10 DONE 0.4s
+
+#8 [internal] load build context
+#8 ...
+
+#11 [deps 1/4] RUN apk add --no-cache libc6-compat curl
+#11 0.481 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+#11 0.784 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+#11 1.720 (1/12) Installing brotli-libs (1.1.0-r2)
+#11 1.787 (2/12) Installing c-ares (1.34.5-r0)
+#11 1.811 (3/12) Installing libunistring (1.2-r0)
+#11 1.867 (4/12) Installing libidn2 (2.3.7-r0)
+#11 1.896 (5/12) Installing nghttp2-libs (1.64.0-r0)
+#11 1.921 (6/12) Installing libpsl (0.21.5-r3)
+#11 1.943 (7/12) Installing zstd-libs (1.5.6-r2)
+#11 1.989 (8/12) Installing libcurl (8.14.1-r2)
+#11 2.073 (9/12) Installing curl (8.14.1-r2)
+#11 2.145 (10/12) Installing musl-obstack (1.2.3-r2)
+#11 2.164 (11/12) Installing libucontext (1.3.2-r0)
+#11 2.182 (12/12) Installing gcompat (1.1.0-r4)
+#11 2.203 Executing busybox-1.37.0-r12.trigger
+#11 2.228 OK: 15 MiB in 29 packages
+#11 DONE 2.5s
+
+#8 [internal] load build context
+#8 ...
+
+#12 [deps 2/4] WORKDIR /app
+#12 DONE 0.1s
+
+#8 [internal] load build context
+#8 ...
+
+#13 [runner 4/9] RUN apk add --no-cache curl
+#13 0.411 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+#13 0.657 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+#13 1.628 (1/9) Installing brotli-libs (1.1.0-r2)
+#13 1.698 (2/9) Installing c-ares (1.34.5-r0)
+#13 1.724 (3/9) Installing libunistring (1.2-r0)
+#13 1.796 (4/9) Installing libidn2 (2.3.7-r0)
+#13 1.827 (5/9) Installing nghttp2-libs (1.64.0-r0)
+#13 1.853 (6/9) Installing libpsl (0.21.5-r3)
+#13 1.878 (7/9) Installing zstd-libs (1.5.6-r2)
+#13 1.934 (8/9) Installing libcurl (8.14.1-r2)
+#13 1.983 (9/9) Installing curl (8.14.1-r2)
+#13 2.027 Executing busybox-1.37.0-r12.trigger
+#13 2.045 OK: 14 MiB in 26 packages
+#13 DONE 2.4s
+
+#8 [internal] load build context
+#8 transferring context: 3.04MB 4.2s done
+#8 DONE 5.0s
+
+#14 [deps 3/4] COPY package.json package-lock.json* pnpm-lock.yaml* ./
+#14 DONE 0.9s
+
+#15 [deps 4/4] RUN   if [ -f package-lock.json ]; then npm ci --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile;   else echo "Lockfile not found." && exit 1;   fi
+#15 15.10 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+#15 16.02 npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+#15 16.29 npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+#15 17.08 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#15 17.41 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#15 17.89 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#15 18.45 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#15 46.62 
+#15 46.62 added 761 packages, and audited 762 packages in 46s
+#15 46.62 
+#15 46.62 110 packages are looking for funding
+#15 46.62   run `npm fund` for details
+#15 46.68 
+#15 46.68 1 moderate severity vulnerability
+#15 46.68 
+#15 46.68 To address all issues, run:
+#15 46.68   npm audit fix --force
+#15 46.68 
+#15 46.68 Run `npm audit` for details.
+#15 46.68 npm notice
+#15 46.68 npm notice New major version of npm available! 10.8.2 -> 11.6.2
+#15 46.68 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+#15 46.68 npm notice To update run: npm install -g npm@11.6.2
+#15 46.68 npm notice
+#15 DONE 46.9s
+
+#16 [builder 2/5] COPY --from=deps /app/node_modules ./node_modules
+#16 DONE 17.7s
+
+#17 [builder 3/5] COPY . .
+#17 DONE 32.1s
+
+#18 [builder 4/5] RUN echo "/** @type {import('next').NextConfig} */" > next.config.mjs &&     echo "const nextConfig = {" >> next.config.mjs &&     echo "  output: 'standalone'," >> next.config.mjs &&     echo "  experimental: {" >> next.config.mjs &&     echo "    serverComponentsExternalPackages: []" >> next.config.mjs &&     echo "  }" >> next.config.mjs &&     echo "};" >> next.config.mjs &&     echo "" >> next.config.mjs &&     echo "export default nextConfig;" >> next.config.mjs
+#18 DONE 1.2s
+
+#19 [builder 5/5] RUN   if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo "Lockfile not found." && exit 1;   fi
+#19 1.625 
+#19 1.625 > my-v0-project@0.1.0 prebuild
+#19 1.625 > node validate-env.js
+#19 1.625 
+#19 1.683 
+#19 1.683 [36m=== Frontend Environment Configuration Validation ===[0m
+#19 1.684 [33m⚠️  .env.local not found. Copy .env.example to .env.local[0m
+#19 1.684 [34mℹ️  Run: cp .env.example .env.local[0m
+#19 1.684 
+#19 1.684 [34mℹ️  Environment: development[0m
+#19 1.684 
+#19 1.684 
+#19 1.684 [36m=== Required Configuration ===[0m
+#19 1.685 [32m✅ NEXT_PUBLIC_API_URL: Backend API URL[0m
+#19 1.685    Value: http://localhost:8002
+#19 1.686 [32m✅ NEXT_PUBLIC_WEBSOCKET_URL: WebSocket Server URL[0m
+#19 1.686    Value: ws://localhost:8001
+#19 1.686 
+#19 1.686 [36m=== Optional Configuration ===[0m
+#19 1.686 [32m✅ NEXT_PUBLIC_MCP_URL: MCP Server URL[0m
+#19 1.687    Value: ws://localhost:3004
+#19 1.688 [33m⚠️  NEXT_PUBLIC_MAX_FILE_SIZE: Using default (50MB)[0m
+#19 1.688 [33m⚠️  NEXT_PUBLIC_ALLOWED_FILE_EXTENSIONS: No file extensions specified[0m
+#19 1.688 
+#19 1.688 [36m=== Environment-Specific Checks (development) ===[0m
+#19 1.688 [32m✅ API URL should point to localhost or Docker service in development[0m
+#19 1.688 
+#19 1.688 [36m=== Configuration Consistency ===[0m
+#19 1.689 
+#19 1.689 [36m=== Feature Flags ===[0m
+#19 1.689 [32m✅ Enabled features: CHAT, UPLOAD, REPORTS, AI_RECOMMENDATIONS, NOTIFICATIONS, SEARCH, QUOTATIONS[0m
+#19 1.689 
+#19 1.689 [36m=== Validation Summary ===[0m
+#19 1.689 [33m⚠️  Found 2 warning(s)[0m
+#19 1.689 
+#19 1.690 [32m✅ Configuration validation completed.[0m
+#19 1.700 
+#19 1.700 > my-v0-project@0.1.0 build
+#19 1.700 > next build
+#19 1.700 
+#19 3.040  ⚠ Invalid next.config.mjs options detected: 
+#19 3.041  ⚠     Unrecognized key(s) in object: 'serverComponentsExternalPackages' at "experimental"
+#19 3.041  ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+#19 3.045  ⚠ `experimental.serverComponentsExternalPackages` has been moved to `serverExternalPackages`. Please update your next.config.mjs file accordingly.
+#19 3.059 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#19 3.059 This information is used to shape Next.js' roadmap and prioritize features.
+#19 3.059 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#19 3.059 https://nextjs.org/telemetry
+#19 3.059 
+#19 3.157    ▲ Next.js 15.2.4
+#19 3.157 
+#19 3.261    Creating an optimized production build ...
+#19 4.203  ⚠ Found lockfile missing swc dependencies, patching...
+#19 4.549    Downloading swc package @next/swc-linux-x64-gnu... to /root/.cache/next-swc
+#19 6.504  ⚠ Lockfile was successfully patched, please run "npm install" to ensure @next/swc dependencies are downloaded
+#19 11.82    Downloading swc package @next/swc-linux-x64-musl... to /root/.cache/next-swc
+#19 35.20  ✓ Compiled successfully
+#19 35.21    Linting and checking validity of types ...
+#19 51.12 Failed to compile.
+#19 51.12 
+#19 51.12 ./components/icons.tsx:3:33
+#19 51.12 Type error: 'LucideProps' refers to a value, but is being used as a type here. Did you mean 'typeof LucideProps'?
+#19 51.12 
+#19 51.12 [0m [90m 1 |[39m [36mimport[39m type { [33mLightbulbIcon[39m [36mas[39m [33mLucideProps[39m } [36mfrom[39m [32m"lucide-react"[39m[0m
+#19 51.12 [0m [90m 2 |[39m[0m
+#19 51.12 [0m[31m[1m>[22m[39m[90m 3 |[39m [36mexport[39m [36mfunction[39m [33mUserIcon[39m(props[33m:[39m [33mLucideProps[39m) {[0m
+#19 51.12 [0m [90m   |[39m                                 [31m[1m^[22m[39m[0m
+#19 51.12 [0m [90m 4 |[39m   [36mreturn[39m ([0m
+#19 51.12 [0m [90m 5 |[39m     [33m<[39m[33msvg[39m[0m
+#19 51.12 [0m [90m 6 |[39m       {[33m...[39mprops}[0m
+#19 51.23 Next.js build worker exited with code: 1 and signal: null
+#19 51.43 npm notice
+#19 51.43 npm notice New major version of npm available! 10.8.2 -> 11.6.2
+#19 51.43 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+#19 51.43 npm notice To update run: npm install -g npm@11.6.2
+#19 51.43 npm notice
+#19 ERROR: process "/bin/sh -c if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo \"Lockfile not found.\" && exit 1;   fi" did not complete successfully: exit code: 1
+------
+ > [builder 5/5] RUN   if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo "Lockfile not found." && exit 1;   fi:
+51.12 [0m [90m   |[39m                                 [31m[1m^[22m[39m[0m
+51.12 [0m [90m 4 |[39m   [36mreturn[39m ([0m
+51.12 [0m [90m 5 |[39m     [33m<[39m[33msvg[39m[0m
+51.12 [0m [90m 6 |[39m       {[33m...[39mprops}[0m
+51.23 Next.js build worker exited with code: 1 and signal: null
+51.43 npm notice
+51.43 npm notice New major version of npm available! 10.8.2 -> 11.6.2
+51.43 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+51.43 npm notice To update run: npm install -g npm@11.6.2
+51.43 npm notice
+------
+Dockerfile:45
+
+--------------------
+
+  44 |     
+
+  45 | >>> RUN \
+
+  46 | >>>   if [ -f package-lock.json ]; then npm run build --legacy-peer-deps; \
+
+  47 | >>>   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+
+  48 | >>>   else echo "Lockfile not found." && exit 1; \
+
+  49 | >>>   fi
+
+  50 |     
+
+--------------------
+
+failed to solve: process "/bin/sh -c if [ -f package-lock.json ]; then npm run build --legacy-peer-deps;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build;   else echo \"Lockfile not found.\" && exit 1;   fi" did not complete successfully: exit code: 1
+
+369  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json --containerd /run/containerd/containerd.sock --pidfile /run/desktop/docker.pid --swarm-default-advertise-addr=192.168.65.3 --host-gateway-ip 192.168.65.254 --allow-direct-routing
+
+github.com/moby/buildkit/executor/runcexecutor.exitError
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/executor/runcexecutor/executor.go:391
+
+github.com/moby/buildkit/executor/runcexecutor.(*runcExecutor).Run
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/executor/runcexecutor/executor.go:339
+
+github.com/moby/buildkit/solver/llbsolver/ops.(*ExecOp).Exec
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/exec.go:497
+
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1120
+
+github.com/moby/buildkit/util/flightcontrol.(*call[...]).run
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/util/flightcontrol/flightcontrol.go:122
+
+sync.(*Once).doSlow
+
+	/usr/local/go/src/sync/once.go:78
+
+sync.(*Once).Do
+
+	/usr/local/go/src/sync/once.go:69
+
+runtime.goexit
+
+	/usr/local/go/src/runtime/asm_amd64.s:1700
+
+
+
+6008 v0.28.0-desktop.1 C:\Program Files\Docker\cli-plugins\docker-buildx.exe bake --file - --progress rawjson --metadata-file C:\Users\fujif\AppData\Local\Temp\compose-build-metadataFile-1510011862.json --allow fs.read=C:\Users\fujif\OneDrive\Documents\GitHub\horme-pov\frontend
+
+google.golang.org/grpc.(*ClientConn).Invoke
+
+	google.golang.org/grpc@v1.72.2/call.go:35
+
+github.com/moby/buildkit/api/services/control.(*controlClient).Solve
+
+	github.com/moby/buildkit@v0.24.0/api/services/control/control_grpc.pb.go:88
+
+github.com/moby/buildkit/client.(*Client).solve.func2
+
+	github.com/moby/buildkit@v0.24.0/client/solve.go:278
+
+golang.org/x/sync/errgroup.(*Group).Go.func1
+
+	golang.org/x/sync@v0.16.0/errgroup/errgroup.go:93
+
+runtime.goexit
+
+	runtime/asm_amd64.s:1700
+
+
+
+369  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json --containerd /run/containerd/containerd.sock --pidfile /run/desktop/docker.pid --swarm-default-advertise-addr=192.168.65.3 --host-gateway-ip 192.168.65.254 --allow-direct-routing
+
+github.com/moby/buildkit/solver.(*edge).execOp
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/edge.go:963
+
+github.com/moby/buildkit/solver/internal/pipe.NewWithFunction[...].func2
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/internal/pipe/pipe.go:78
+
+runtime.goexit
+
+	/usr/local/go/src/runtime/asm_amd64.s:1700
+
+
+
+6008 v0.28.0-desktop.1 C:\Program Files\Docker\cli-plugins\docker-buildx.exe bake --file - --progress rawjson --metadata-file C:\Users\fujif\AppData\Local\Temp\compose-build-metadataFile-1510011862.json --allow fs.read=C:\Users\fujif\OneDrive\Documents\GitHub\horme-pov\frontend
+
+github.com/moby/buildkit/client.(*Client).solve.func2
+
+	github.com/moby/buildkit@v0.24.0/client/solve.go:295
+
+golang.org/x/sync/errgroup.(*Group).Go.func1
+
+	golang.org/x/sync@v0.16.0/errgroup/errgroup.go:93
+
+
+
+369  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json --containerd /run/containerd/containerd.sock --pidfile /run/desktop/docker.pid --swarm-default-advertise-addr=192.168.65.3 --host-gateway-ip 192.168.65.254 --allow-direct-routing
+
+github.com/moby/buildkit/solver/llbsolver/ops.(*ExecOp).Exec
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/exec.go:518
+
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1120
+
+
+
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/tomx6aw7fbaz405ig7m792qsm
+

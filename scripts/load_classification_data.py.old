@@ -1,0 +1,417 @@
+#!/usr/bin/env python3
+"""
+UNSPSC and ETIM Classification Data Loader
+
+This script loads UNSPSC and ETIM classification data into PostgreSQL and Neo4j.
+
+Usage:
+    python scripts/load_classification_data.py --unspsc <unspsc_file.csv> --etim <etim_file.csv>
+
+Data Sources:
+    - UNSPSC: Download from https://www.unspsc.org/
+    - ETIM: Download from https://www.etim-international.com/
+
+Data Format Requirements:
+    UNSPSC CSV columns: code, segment, family, class, commodity, title, definition, level, synonyms
+    ETIM CSV columns: etim_class, etim_version, description_en, description_de, features, parent_class
+
+CRITICAL: This script does NOT create mock data. Real data must be obtained from official sources.
+"""
+
+import os
+import sys
+import argparse
+import logging
+import csv
+import json
+from pathlib import Path
+from typing import Dict, List, Any
+from datetime import datetime
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from kailash.workflow.builder import WorkflowBuilder
+from kailash.runtime.local import LocalRuntime
+from src.core.postgresql_database import get_database
+from src.core.neo4j_knowledge_graph import get_knowledge_graph
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class ClassificationDataLoader:
+    """Load UNSPSC and ETIM classification data"""
+
+    def __init__(self):
+        """Initialize loader with database connections"""
+        self.runtime = LocalRuntime()
+        self.db = None
+        self.kg = None
+
+        try:
+            self.db = get_database()
+            logger.info("✅ Connected to PostgreSQL")
+        except Exception as e:
+            logger.error(f"❌ PostgreSQL connection failed: {e}")
+            raise
+
+        try:
+            self.kg = get_knowledge_graph()
+            logger.info("✅ Connected to Neo4j")
+        except Exception as e:
+            logger.warning(f"⚠️ Neo4j connection failed: {e}")
+            logger.warning("Neo4j integration will be skipped")
+
+    def load_unspsc_from_csv(self, csv_file: str) -> int:
+        """
+        Load UNSPSC codes from CSV file
+
+        CSV Format:
+            code,segment,family,class,commodity,title,definition,level,synonyms
+
+        Args:
+            csv_file: Path to UNSPSC CSV file
+
+        Returns:
+            Number of codes loaded
+        """
+        if not os.path.exists(csv_file):
+            raise FileNotFoundError(f"UNSPSC CSV file not found: {csv_file}")
+
+        logger.info(f"Loading UNSPSC codes from {csv_file}")
+
+        unspsc_records = []
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+
+            for row in reader:
+                # Parse synonyms (comma-separated in CSV)
+                synonyms = []
+                if row.get('synonyms'):
+                    synonyms = [s.strip() for s in row['synonyms'].split(',')]
+
+                record = {
+                    'code': row['code'],
+                    'segment': row['segment'],
+                    'family': row['family'],
+                    'class_code': row['class'],
+                    'commodity': row['commodity'],
+                    'title': row['title'],
+                    'definition': row['definition'],
+                    'level': row['level'],
+                    'synonyms': synonyms,
+                    'parent_code': row.get('parent_code'),
+                    'is_active': True,
+                    'created_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }
+                unspsc_records.append(record)
+
+        if not unspsc_records:
+            logger.warning("No UNSPSC records found in CSV")
+            return 0
+
+        # Load into PostgreSQL using DataFlow
+        logger.info(f"Inserting {len(unspsc_records)} UNSPSC codes into PostgreSQL...")
+
+        batch_size = 500
+        total_loaded = 0
+
+        for i in range(0, len(unspsc_records), batch_size):
+            batch = unspsc_records[i:i + batch_size]
+
+            try:
+                workflow = WorkflowBuilder()
+                workflow.add_node("UNSPSCCodeBulkCreateNode", "create_unspsc", {
+                    "data": batch,
+                    "batch_size": len(batch),
+                    "conflict_resolution": "update"  # Update if exists
+                })
+
+                self.runtime.execute(workflow.build())
+                total_loaded += len(batch)
+                logger.info(f"Loaded {total_loaded}/{len(unspsc_records)} UNSPSC codes...")
+
+            except Exception as e:
+                logger.error(f"Failed to load UNSPSC batch: {e}")
+                continue
+
+        # Load into Neo4j if available
+        if self.kg:
+            logger.info("Loading UNSPSC codes into Neo4j knowledge graph...")
+            neo4j_loaded = 0
+
+            for record in unspsc_records:
+                try:
+                    success = self.kg.create_unspsc_node(
+                        unspsc_code=record['code'],
+                        title=record['title'],
+                        definition=record['definition'],
+                        segment=record['segment'],
+                        family=record['family'],
+                        class_code=record['class_code'],
+                        commodity=record['commodity'],
+                        level=record['level']
+                    )
+                    if success:
+                        neo4j_loaded += 1
+
+                except Exception as e:
+                    logger.warning(f"Failed to load UNSPSC {record['code']} to Neo4j: {e}")
+
+            logger.info(f"✅ Loaded {neo4j_loaded} UNSPSC codes into Neo4j")
+
+        logger.info(f"✅ Successfully loaded {total_loaded} UNSPSC codes")
+        return total_loaded
+
+    def load_etim_from_csv(self, csv_file: str) -> int:
+        """
+        Load ETIM classes from CSV file
+
+        CSV Format:
+            etim_class,etim_version,description_en,description_de,description_fr,...,features,parent_class
+
+        Args:
+            csv_file: Path to ETIM CSV file
+
+        Returns:
+            Number of classes loaded
+        """
+        if not os.path.exists(csv_file):
+            raise FileNotFoundError(f"ETIM CSV file not found: {csv_file}")
+
+        logger.info(f"Loading ETIM classes from {csv_file}")
+
+        etim_records = []
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+
+            for row in reader:
+                # Parse multi-lingual descriptions
+                description = {}
+                for lang in ['en', 'de', 'fr', 'es', 'it', 'nl', 'pt', 'pl', 'cs', 'ru', 'zh', 'ja', 'ar']:
+                    desc_key = f'description_{lang}'
+                    if desc_key in row and row[desc_key]:
+                        description[lang] = row[desc_key]
+
+                # Parse features (JSON array in CSV)
+                features = []
+                if row.get('features'):
+                    try:
+                        features = json.loads(row['features'])
+                    except json.JSONDecodeError:
+                        logger.warning(f"Invalid JSON in features for {row['etim_class']}")
+
+                # Parse keywords (JSON object in CSV)
+                keywords = {}
+                if row.get('keywords'):
+                    try:
+                        keywords = json.loads(row['keywords'])
+                    except json.JSONDecodeError:
+                        logger.warning(f"Invalid JSON in keywords for {row['etim_class']}")
+
+                record = {
+                    'etim_class': row['etim_class'],
+                    'etim_version': row['etim_version'],
+                    'description': description,
+                    'features': features,
+                    'keywords': keywords,
+                    'parent_class': row.get('parent_class'),
+                    'is_active': True,
+                    'created_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }
+                etim_records.append(record)
+
+        if not etim_records:
+            logger.warning("No ETIM records found in CSV")
+            return 0
+
+        # Load into PostgreSQL using DataFlow
+        logger.info(f"Inserting {len(etim_records)} ETIM classes into PostgreSQL...")
+
+        batch_size = 500
+        total_loaded = 0
+
+        for i in range(0, len(etim_records), batch_size):
+            batch = etim_records[i:i + batch_size]
+
+            try:
+                workflow = WorkflowBuilder()
+                workflow.add_node("ETIMClassBulkCreateNode", "create_etim", {
+                    "data": batch,
+                    "batch_size": len(batch),
+                    "conflict_resolution": "update"  # Update if exists
+                })
+
+                self.runtime.execute(workflow.build())
+                total_loaded += len(batch)
+                logger.info(f"Loaded {total_loaded}/{len(etim_records)} ETIM classes...")
+
+            except Exception as e:
+                logger.error(f"Failed to load ETIM batch: {e}")
+                continue
+
+        # Load into Neo4j if available
+        if self.kg:
+            logger.info("Loading ETIM classes into Neo4j knowledge graph...")
+            neo4j_loaded = 0
+
+            for record in etim_records:
+                try:
+                    success = self.kg.create_etim_node(
+                        etim_class=record['etim_class'],
+                        etim_version=record['etim_version'],
+                        description_en=record['description'].get('en', ''),
+                        features=record['features'],
+                        parent_class=record.get('parent_class')
+                    )
+                    if success:
+                        neo4j_loaded += 1
+
+                except Exception as e:
+                    logger.warning(f"Failed to load ETIM {record['etim_class']} to Neo4j: {e}")
+
+            logger.info(f"✅ Loaded {neo4j_loaded} ETIM classes into Neo4j")
+
+        logger.info(f"✅ Successfully loaded {total_loaded} ETIM classes")
+        return total_loaded
+
+    def verify_data_integrity(self) -> Dict[str, Any]:
+        """
+        Verify loaded classification data integrity
+
+        Returns:
+            Dictionary with verification results
+        """
+        logger.info("Verifying classification data integrity...")
+
+        results = {
+            'unspsc_count': 0,
+            'etim_count': 0,
+            'unspsc_neo4j_count': 0,
+            'etim_neo4j_count': 0,
+            'integrity_ok': False
+        }
+
+        try:
+            # Check PostgreSQL UNSPSC count
+            workflow = WorkflowBuilder()
+            workflow.add_node("UNSPSCCodeListNode", "count_unspsc", {
+                "filter": {"is_active": True},
+                "limit": 1
+            })
+            pg_results, _ = self.runtime.execute(workflow.build())
+            # Note: This returns records, not count. Need to implement count aggregation.
+            results['unspsc_count'] = len(pg_results.get("count_unspsc", []))
+
+            # Check PostgreSQL ETIM count
+            workflow = WorkflowBuilder()
+            workflow.add_node("ETIMClassListNode", "count_etim", {
+                "filter": {"is_active": True},
+                "limit": 1
+            })
+            pg_results, _ = self.runtime.execute(workflow.build())
+            results['etim_count'] = len(pg_results.get("count_etim", []))
+
+            # Check Neo4j if available
+            if self.kg:
+                neo4j_stats = self.kg.get_statistics()
+                node_counts = neo4j_stats.get('node_counts', {})
+                results['unspsc_neo4j_count'] = node_counts.get('UNSPSCCode', 0)
+                results['etim_neo4j_count'] = node_counts.get('ETIMClass', 0)
+
+            results['integrity_ok'] = (
+                results['unspsc_count'] > 0 and
+                results['etim_count'] > 0
+            )
+
+            logger.info(f"Verification Results: {results}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Data integrity verification failed: {e}")
+            results['error'] = str(e)
+            return results
+
+    def close(self):
+        """Close database connections"""
+        if self.db:
+            self.db.close()
+        if self.kg:
+            self.kg.close()
+
+
+def main():
+    """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description='Load UNSPSC and ETIM classification data into PostgreSQL and Neo4j'
+    )
+    parser.add_argument(
+        '--unspsc',
+        type=str,
+        help='Path to UNSPSC CSV file'
+    )
+    parser.add_argument(
+        '--etim',
+        type=str,
+        help='Path to ETIM CSV file'
+    )
+    parser.add_argument(
+        '--verify',
+        action='store_true',
+        help='Verify data integrity after loading'
+    )
+
+    args = parser.parse_args()
+
+    if not args.unspsc and not args.etim:
+        parser.print_help()
+        print("\nERROR: At least one of --unspsc or --etim must be provided")
+        sys.exit(1)
+
+    try:
+        loader = ClassificationDataLoader()
+
+        # Load UNSPSC data
+        if args.unspsc:
+            unspsc_count = loader.load_unspsc_from_csv(args.unspsc)
+            print(f"\n✅ Loaded {unspsc_count} UNSPSC codes")
+
+        # Load ETIM data
+        if args.etim:
+            etim_count = loader.load_etim_from_csv(args.etim)
+            print(f"\n✅ Loaded {etim_count} ETIM classes")
+
+        # Verify data integrity
+        if args.verify:
+            results = loader.verify_data_integrity()
+            print(f"\n📊 Verification Results:")
+            print(f"  PostgreSQL UNSPSC: {results['unspsc_count']}")
+            print(f"  PostgreSQL ETIM: {results['etim_count']}")
+            print(f"  Neo4j UNSPSC: {results['unspsc_neo4j_count']}")
+            print(f"  Neo4j ETIM: {results['etim_neo4j_count']}")
+            print(f"  Integrity OK: {results['integrity_ok']}")
+
+        loader.close()
+
+        print("\n✅ Classification data loading complete!")
+        print("\nNext steps:")
+        print("1. Run classification: python -m src.core.product_classifier")
+        print("2. Test API: curl http://localhost:8000/api/classify/product -d '{\"product_id\": 1}'")
+        print("3. Check statistics: curl http://localhost:8000/api/classification/statistics")
+
+    except KeyboardInterrupt:
+        print("\n⚠️ Loading interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ Loading failed: {e}", exc_info=True)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

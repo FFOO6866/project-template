@@ -1,0 +1,419 @@
+# Horme POV - Docker-Based Test Infrastructure
+# ==============================================================================
+# CRITICAL: ALL TESTS MUST RUN IN DOCKER CONTAINERS - NO LOCAL EXECUTION
+#
+# This file defines the complete test infrastructure with:
+# - Real Docker services (PostgreSQL, Redis, Neo4j, etc.)
+# - Test runner container that executes pytest
+# - Proper network isolation and service dependencies
+#
+# Usage:
+#   # Start all test services
+#   docker-compose -f docker-compose.test.yml up -d
+#
+#   # Run all tests in Docker
+#   docker-compose -f docker-compose.test.yml run --rm test-runner pytest tests/ -v
+#
+#   # Run specific test tier
+#   docker-compose -f docker-compose.test.yml run --rm test-runner pytest tests/unit/ -v --timeout=1
+#   docker-compose -f docker-compose.test.yml run --rm test-runner pytest tests/integration/ -v --timeout=5
+#   docker-compose -f docker-compose.test.yml run --rm test-runner pytest tests/e2e/ -v --timeout=10
+#
+#   # Cleanup
+#   docker-compose -f docker-compose.test.yml down -v
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # PostgreSQL with pgvector - Port 5434 (external access)
+  # ==========================================================================
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: horme_pov_test_postgres
+    environment:
+      POSTGRES_DB: horme_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./tests/utils/init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d horme_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Redis - Port 6380 (external access)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: horme_pov_test_redis
+    ports:
+      - "6380:6379"
+    command: >
+      redis-server
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Neo4j Graph Database - Port 7474 (HTTP) and 7687 (Bolt)
+  # ==========================================================================
+  neo4j:
+    image: neo4j:5-community
+    container_name: horme_pov_test_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/test_password
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_memory_heap_max__size: 1G
+      NEO4J_dbms_memory_pagecache_size: 512M
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_test_data:/data
+      - neo4j_test_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p test_password 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Ollama for AI testing - Port 11435 (external access)
+  # ==========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: horme_pov_test_ollama
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_test_models:/root/.ollama
+    environment:
+      - OLLAMA_MODELS=/root/.ollama/models
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MySQL - Port 3307 (external access)
+  # ==========================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: horme_pov_test_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: test_password
+      MYSQL_DATABASE: horme_test
+      MYSQL_USER: horme_test
+      MYSQL_PASSWORD: test_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptest_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MongoDB - Port 27017 (external access)
+  # ==========================================================================
+  mongodb:
+    image: mongo:7
+    container_name: horme_pov_test_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: horme
+      MONGO_INITDB_ROOT_PASSWORD: horme123
+      MONGO_INITDB_DATABASE: horme_test
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_test_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MinIO Object Storage - Port 9001 (API) and 9002 (Console)
+  # ==========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: horme_pov_test_minio
+    ports:
+      - "9001:9000"    # API
+      - "9002:9001"    # Console
+    volumes:
+      - minio_test_data:/data
+    environment:
+      MINIO_ROOT_USER: testuser
+      MINIO_ROOT_PASSWORD: testpass123
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    networks:
+      - horme_test_network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Test Runner Service
+  # ==========================================================================
+  # This container runs pytest with access to all test services
+  # CRITICAL: This is the ONLY way to run tests - NO local Python execution
+  # ==========================================================================
+  test-runner:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.test
+    container_name: horme_pov_test_runner
+    environment:
+      # Docker container flag
+      - DOCKER_CONTAINER=true
+      - TESTING=true
+      - ENVIRONMENT=test
+
+      # PostgreSQL configuration (using Docker service names)
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=horme_test
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=horme_test
+      - DB_USER=test_user
+      - DB_PASSWORD=test_password
+
+      # Redis configuration (using Docker service names)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
+
+      # Neo4j configuration (using Docker service names)
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=test_password
+
+      # Ollama configuration (using Docker service names)
+      - OLLAMA_HOST=ollama
+      - OLLAMA_PORT=11434
+      - OLLAMA_BASE_URL=http://ollama:11434
+
+      # MySQL configuration (using Docker service names)
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=horme_test
+      - MYSQL_USER=horme_test
+      - MYSQL_PASSWORD=test_password
+
+      # MongoDB configuration (using Docker service names)
+      - MONGODB_HOST=mongodb
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=horme_test
+      - MONGODB_USER=horme
+      - MONGODB_PASSWORD=horme123
+
+      # MinIO configuration (using Docker service names)
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=testuser
+      - MINIO_SECRET_KEY=testpass123
+
+      # API configuration
+      - API_URL=http://localhost:8000
+      - WEBSOCKET_URL=ws://localhost/ws
+
+      # Test flags
+      - TEST_DOCKER_AVAILABLE=true
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+
+    volumes:
+      # Mount source code and tests (read-only for safety)
+      - ./src:/workspace/src:ro
+      - ./tests:/workspace/tests:ro
+      - ./pytest.ini:/workspace/pytest.ini:ro
+      - ./requirements-test.txt:/workspace/requirements-test.txt:ro
+
+      # Mount test data directory (read-write for test artifacts)
+      - test_runner_data:/workspace/test_data
+
+    working_dir: /workspace
+
+    # Wait for all services to be healthy before running tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+    networks:
+      - horme_test_network
+
+    # Don't auto-start - only run when explicitly called
+    profiles:
+      - test
+
+    # Default command: show help
+    command: >
+      sh -c "
+        echo '========================================';
+        echo 'Horme POV Test Runner';
+        echo '========================================';
+        echo '';
+        echo 'Available commands:';
+        echo '  pytest tests/ -v                    # Run all tests';
+        echo '  pytest tests/unit/ -v               # Run unit tests only';
+        echo '  pytest tests/integration/ -v        # Run integration tests';
+        echo '  pytest tests/e2e/ -v                # Run E2E tests';
+        echo '  pytest tests/unit/ -v --timeout=1   # Unit tests with 1s timeout';
+        echo '  pytest tests/integration/ -v --timeout=5   # Integration with 5s timeout';
+        echo '  pytest tests/e2e/ -v --timeout=10   # E2E with 10s timeout';
+        echo '  pytest -m tier1 -v                  # Run only Tier 1 tests';
+        echo '  pytest -m tier2 -v                  # Run only Tier 2 tests';
+        echo '  pytest -m tier3 -v                  # Run only Tier 3 tests';
+        echo '';
+        echo 'Example usage:';
+        echo '  docker-compose -f docker-compose.test.yml run --rm test-runner pytest tests/unit/ -v';
+        echo '';
+      "
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_test_data:
+    driver: local
+  mysql_test_data:
+    driver: local
+  mongodb_test_data:
+    driver: local
+  neo4j_test_data:
+    driver: local
+  neo4j_test_logs:
+    driver: local
+  ollama_test_models:
+    driver: local
+  minio_test_data:
+    driver: local
+  test_runner_data:
+    driver: local
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  horme_test_network:
+    name: horme_pov_test_network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

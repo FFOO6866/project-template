@@ -22,10 +22,42 @@ import os
 
 # Initialize DataFlow with environment-based configuration
 # DataFlow alpha only supports PostgreSQL
-db_url = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://horme_user:horme_password@localhost:5432/horme_classification_db"  # Default to PostgreSQL (DataFlow alpha requirement)
-)
+# SECURITY: Database credentials must come from environment variables
+db_url = os.getenv("DATABASE_URL")
+
+# Get environment to check for production
+environment = os.getenv('ENVIRONMENT', 'development').lower()
+
+if not db_url:
+    # CRITICAL: Build database URL from individual components
+    postgres_host = os.getenv("POSTGRES_HOST")
+    postgres_port = os.getenv("POSTGRES_PORT", "5432")
+    postgres_db = os.getenv("POSTGRES_DB", "horme_classification_db")
+    postgres_user = os.getenv("POSTGRES_USER", "horme_user")
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
+
+    # CRITICAL: Fail fast if required configuration is missing
+    if not postgres_host:
+        raise ValueError(
+            "POSTGRES_HOST environment variable is required. "
+            "Set POSTGRES_HOST=postgres (use Docker service name in production)"
+        )
+
+    if not postgres_password:
+        raise ValueError(
+            "Database password not configured. Set POSTGRES_PASSWORD environment variable "
+            "or provide complete DATABASE_URL. For production, use: "
+            "python generate_secure_secrets.py to generate secure credentials."
+        )
+
+    # CRITICAL: Block localhost in production
+    if environment == 'production' and 'localhost' in postgres_host.lower():
+        raise ValueError(
+            "POSTGRES_HOST cannot be 'localhost' in production environment. "
+            "Use Docker service name 'postgres' instead: POSTGRES_HOST=postgres"
+        )
+
+    db_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
 
 # Initialize DataFlow with enterprise features
 db = DataFlow(

@@ -1,0 +1,13 @@
+Test RFP Document
+
+Project: Office Equipment Procurement
+Date: 2025-10-23
+
+Requirements:
+- 50 office chairs
+- 25 standing desks
+- 100 LED desk lamps
+- Cable management solutions
+
+Budget: $50,000
+Timeline: 30 days

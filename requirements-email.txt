@@ -1,0 +1,36 @@
+# Email Monitoring Service Dependencies
+# For email quotation request module
+# Production-ready with no mock dependencies
+
+# IMAP client for email monitoring
+imapclient==2.3.1
+
+# Email parsing (standard library, but ensuring compatibility)
+# email - built-in to Python
+
+# Async PostgreSQL driver (required for database connections)
+asyncpg>=0.29.0
+structlog>=23.1.0
+openai>=1.0.0
+
+# Structured logging (already in main requirements)
+# structlog>=23.1.0
+
+# OpenAI integration (already in main requirements)
+# openai>=1.0.0
+
+# PDF processing (for attachments)
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+
+# DOCX processing (for attachments)
+python-docx==1.1.0
+
+# Excel processing (for attachments - optional)
+openpyxl==3.1.2
+
+# Text extraction and processing
+python-magic==0.4.27  # File type detection
+
+# Security and validation
+pydantic>=2.0.0

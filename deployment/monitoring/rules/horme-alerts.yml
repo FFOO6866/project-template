@@ -1,0 +1,356 @@
+# Production Alert Rules for Horme POV
+# Critical infrastructure monitoring and alerting
+
+groups:
+  # =============================================================================
+  # APPLICATION HEALTH ALERTS
+  # =============================================================================
+  - name: horme-application
+    interval: 30s
+    rules:
+      - alert: HormeAppDown
+        expr: up{job="horme-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: horme-app
+          team: platform
+        annotations:
+          summary: "Horme application is down"
+          description: "The main Horme application has been down for more than 1 minute."
+          runbook_url: "https://docs.horme.ai/runbooks/app-down"
+
+      - alert: HormeAppHighErrorRate
+        expr: rate(horme_http_requests_total{status=~"5.."}[5m]) / rate(horme_http_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: horme-app
+          team: platform
+        annotations:
+          summary: "High error rate in Horme application"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes."
+
+      - alert: HormeAppHighLatency
+        expr: histogram_quantile(0.95, rate(horme_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: horme-app
+          team: platform
+        annotations:
+          summary: "High latency in Horme application"
+          description: "95th percentile latency is {{ $value }}s for the last 5 minutes."
+
+      - alert: HormeFrontendDown
+        expr: up{job="horme-frontend"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: frontend
+          team: frontend
+        annotations:
+          summary: "Horme frontend is down"
+          description: "The frontend application has been down for more than 2 minutes."
+
+  # =============================================================================
+  # DATABASE HEALTH ALERTS
+  # =============================================================================
+  - name: horme-databases
+    interval: 30s
+    rules:
+      - alert: PostgresPrimaryDown
+        expr: up{job="postgres-primary"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: postgres
+          team: data
+        annotations:
+          summary: "PostgreSQL primary database is down"
+          description: "Primary PostgreSQL database has been down for more than 30 seconds."
+          runbook_url: "https://docs.horme.ai/runbooks/postgres-primary-down"
+
+      - alert: PostgresReplicaDown
+        expr: up{job="postgres-replica"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: postgres
+          team: data
+        annotations:
+          summary: "PostgreSQL replica database is down"
+          description: "PostgreSQL read replica has been down for more than 2 minutes."
+
+      - alert: PostgresHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+          team: data
+        annotations:
+          summary: "High PostgreSQL connection usage"
+          description: "PostgreSQL is using {{ $value | humanizePercentage }} of available connections."
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag > 60
+        for: 2m
+        labels:
+          severity: warning
+          service: postgres
+          team: data
+        annotations:
+          summary: "PostgreSQL replication lag is high"
+          description: "Replication lag is {{ $value }} seconds."
+
+      - alert: Neo4jDown
+        expr: up{job="neo4j"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: neo4j
+          team: data
+        annotations:
+          summary: "Neo4j database is down"
+          description: "Neo4j knowledge graph database has been down for more than 1 minute."
+
+      - alert: Neo4jHighMemoryUsage
+        expr: neo4j_vm_heap_used / neo4j_vm_heap_max > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: neo4j
+          team: data
+        annotations:
+          summary: "High Neo4j memory usage"
+          description: "Neo4j heap memory usage is {{ $value | humanizePercentage }}."
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: redis
+          team: platform
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been down for more than 30 seconds."
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+          team: platform
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}."
+
+      - alert: ChromaDBDown
+        expr: up{job="chromadb"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: chromadb
+          team: ml
+        annotations:
+          summary: "ChromaDB vector database is down"
+          description: "ChromaDB has been down for more than 2 minutes."
+
+  # =============================================================================
+  # INFRASTRUCTURE ALERTS
+  # =============================================================================
+  - name: horme-infrastructure
+    interval: 30s
+    rules:
+      - alert: TraefikDown
+        expr: up{job="traefik"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: traefik
+          team: platform
+        annotations:
+          summary: "Traefik reverse proxy is down"
+          description: "Traefik has been down for more than 1 minute."
+
+      - alert: HAProxyDown
+        expr: up{job="haproxy"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: haproxy
+          team: platform
+        annotations:
+          summary: "HAProxy load balancer is down"
+          description: "HAProxy has been down for more than 1 minute."
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} {{ $labels.mountpoint }}."
+
+      - alert: DiskWillFillIn4Hours
+        expr: predict_linear(node_filesystem_avail_bytes[1h], 4*3600) < 0
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Disk will fill up soon"
+          description: "Disk {{ $labels.mountpoint }} on {{ $labels.instance }} will fill up in approximately 4 hours."
+
+  # =============================================================================
+  # MONITORING INFRASTRUCTURE ALERTS
+  # =============================================================================
+  - name: horme-monitoring
+    interval: 60s
+    rules:
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: prometheus
+          team: platform
+        annotations:
+          summary: "Prometheus monitoring is down"
+          description: "Prometheus has been down for more than 2 minutes."
+
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: grafana
+          team: platform
+        annotations:
+          summary: "Grafana dashboard is down"
+          description: "Grafana has been down for more than 2 minutes."
+
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: alertmanager
+          team: platform
+        annotations:
+          summary: "Alertmanager is down"
+          description: "Alertmanager has been down for more than 2 minutes."
+
+      - alert: ElasticsearchDown
+        expr: up{job="elasticsearch"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: elasticsearch
+          team: platform
+        annotations:
+          summary: "Elasticsearch is down"
+          description: "Elasticsearch log storage has been down for more than 2 minutes."
+
+  # =============================================================================
+  # BACKUP AND SECURITY ALERTS
+  # =============================================================================
+  - name: horme-backup-security
+    interval: 300s
+    rules:
+      - alert: PostgresBackupFailed
+        expr: postgres_backup_last_success_timestamp < time() - 86400
+        for: 30m
+        labels:
+          severity: warning
+          service: backup
+          team: data
+        annotations:
+          summary: "PostgreSQL backup failed"
+          description: "PostgreSQL backup has not succeeded in the last 24 hours."
+
+      - alert: VaultSealed
+        expr: vault_core_unsealed == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: vault
+          team: security
+        annotations:
+          summary: "Vault is sealed"
+          description: "HashiCorp Vault is sealed and secrets are inaccessible."
+
+      - alert: SecurityThreatDetected
+        expr: increase(falco_events_total[5m]) > 10
+        for: 0s
+        labels:
+          severity: critical
+          service: security
+          team: security
+        annotations:
+          summary: "Security threat detected"
+          description: "Falco has detected {{ $value }} security events in the last 5 minutes."
+
+  # =============================================================================
+  # BUSINESS LOGIC ALERTS
+  # =============================================================================
+  - name: horme-business
+    interval: 60s
+    rules:
+      - alert: LowMCPConnections
+        expr: horme_mcp_active_connections < 5
+        for: 10m
+        labels:
+          severity: warning
+          service: mcp
+          team: platform
+        annotations:
+          summary: "Low MCP connections"
+          description: "Only {{ $value }} active MCP connections. Expected more in production."
+
+      - alert: HighRAGQueryLatency
+        expr: histogram_quantile(0.95, rate(horme_rag_query_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: rag
+          team: ml
+        annotations:
+          summary: "High RAG query latency"
+          description: "95th percentile RAG query latency is {{ $value }}s."
+
+      - alert: ScrapingJobsFailing
+        expr: rate(horme_scraping_errors_total[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: scraping
+          team: data
+        annotations:
+          summary: "High scraping job failure rate"
+          description: "Scraping job error rate is {{ $value }} errors per second."

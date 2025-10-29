@@ -1,0 +1,298 @@
+# MCP Server Alerting Rules
+# Production monitoring and alerting for MCP server infrastructure
+
+groups:
+  - name: mcp-server-health
+    interval: 30s
+    rules:
+      # MCP Server availability
+      - alert: MCPServerDown
+        expr: up{job="mcp-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: mcp-server
+        annotations:
+          summary: "MCP Server instance is down"
+          description: "MCP Server instance {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://docs.yourdomain.com/runbooks/mcp-server-down"
+
+      # High error rate
+      - alert: MCPServerHighErrorRate
+        expr: |
+          (
+            rate(mcp_requests_total{status=~"4..|5.."}[5m]) /
+            rate(mcp_requests_total[5m])
+          ) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server high error rate"
+          description: "MCP Server {{ $labels.instance }} has error rate of {{ $value }}% for more than 2 minutes."
+
+      # Critical error rate
+      - alert: MCPServerCriticalErrorRate
+        expr: |
+          (
+            rate(mcp_requests_total{status=~"5.."}[5m]) /
+            rate(mcp_requests_total[5m])
+          ) * 100 > 10
+        for: 1m
+        labels:
+          severity: critical
+          service: mcp-server
+        annotations:
+          summary: "MCP Server critical error rate"
+          description: "MCP Server {{ $labels.instance }} has critical error rate of {{ $value }}% for more than 1 minute."
+
+      # High response time
+      - alert: MCPServerHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(mcp_request_duration_seconds_bucket[5m])
+          ) * 1000 > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server high latency"
+          description: "MCP Server {{ $labels.instance }} 95th percentile latency is {{ $value }}ms for more than 5 minutes."
+
+      # Agent connection issues
+      - alert: MCPServerLowAgentConnections
+        expr: mcp_active_agents < 1
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server has no active agent connections"
+          description: "MCP Server {{ $labels.instance }} has no active agent connections for more than 5 minutes."
+
+      # Too many agent connections
+      - alert: MCPServerTooManyAgents
+        expr: mcp_active_agents > 200
+        for: 2m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server has too many agent connections"
+          description: "MCP Server {{ $labels.instance }} has {{ $value }} active agent connections, approaching limits."
+
+      # Circuit breaker open
+      - alert: MCPServerCircuitBreakerOpen
+        expr: mcp_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: mcp-server
+        annotations:
+          summary: "MCP Server circuit breaker is open"
+          description: "MCP Server {{ $labels.instance }} circuit breaker is open, blocking requests."
+
+  - name: mcp-infrastructure
+    interval: 30s
+    rules:
+      # Database connectivity
+      - alert: MCPDatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "MCP Database is down"
+          description: "PostgreSQL database {{ $labels.instance }} is down for more than 1 minute."
+
+      # Database connection pool exhaustion
+      - alert: MCPDatabaseConnectionPoolHigh
+        expr: mcp_connection_pool_size{pool_type="postgresql"} > 18
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "MCP Database connection pool usage high"
+          description: "Database connection pool usage is {{ $value }}/20 connections."
+
+      # Redis cache issues
+      - alert: MCPRedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "MCP Redis cache is down"
+          description: "Redis instance {{ $labels.instance }} is down for more than 1 minute."
+
+      # Redis memory usage
+      - alert: MCPRedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis {{ $labels.instance }} memory usage is {{ $value }}%."
+
+      # Load balancer issues
+      - alert: MCPLoadBalancerDown
+        expr: up{job="haproxy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: load-balancer
+        annotations:
+          summary: "MCP Load balancer is down"
+          description: "HAProxy load balancer is down for more than 1 minute."
+
+      # Backend server issues
+      - alert: MCPBackendServerDown
+        expr: haproxy_server_up == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: load-balancer
+        annotations:
+          summary: "MCP Backend server is down"
+          description: "Backend server {{ $labels.server }} in {{ $labels.backend }} is down."
+
+  - name: mcp-performance
+    interval: 30s
+    rules:
+      # High CPU usage
+      - alert: MCPServerHighCPU
+        expr: |
+          (
+            rate(container_cpu_usage_seconds_total{name=~".*mcp-server.*"}[5m]) * 100
+          ) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server high CPU usage"
+          description: "MCP Server {{ $labels.name }} CPU usage is {{ $value }}% for more than 5 minutes."
+
+      # High memory usage
+      - alert: MCPServerHighMemory
+        expr: |
+          (
+            container_memory_usage_bytes{name=~".*mcp-server.*"} /
+            container_spec_memory_limit_bytes{name=~".*mcp-server.*"} * 100
+          ) > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server high memory usage"
+          description: "MCP Server {{ $labels.name }} memory usage is {{ $value }}% for more than 5 minutes."
+
+      # Disk space issues
+      - alert: MCPServerLowDiskSpace
+        expr: |
+          (
+            (node_filesystem_size_bytes - node_filesystem_avail_bytes) /
+            node_filesystem_size_bytes * 100
+          ) > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "MCP Server low disk space"
+          description: "Disk usage on {{ $labels.device }} is {{ $value }}%."
+
+      # Request queue backup
+      - alert: MCPServerRequestQueueBackup
+        expr: mcp_request_queue_size > 800
+        for: 2m
+        labels:
+          severity: warning
+          service: mcp-server
+        annotations:
+          summary: "MCP Server request queue backup"
+          description: "MCP Server {{ $labels.instance }} request queue has {{ $value }} pending requests."
+
+  - name: mcp-security
+    interval: 60s
+    rules:
+      # High rate limiting triggers
+      - alert: MCPServerHighRateLimiting
+        expr: rate(mcp_rate_limit_exceeded_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "MCP Server high rate limiting"
+          description: "MCP Server {{ $labels.instance }} is rate limiting {{ $value }} requests/second."
+
+      # Authentication failures
+      - alert: MCPServerAuthFailures
+        expr: rate(mcp_auth_failures_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "MCP Server authentication failures"
+          description: "MCP Server {{ $labels.instance }} has {{ $value }} authentication failures/second."
+
+      # SSL certificate expiration
+      - alert: MCPServerSSLCertExpiring
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+        for: 1h
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "MCP Server SSL certificate expiring"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}."
+
+  - name: mcp-business-metrics
+    interval: 60s
+    rules:
+      # Low request rate (business impact)
+      - alert: MCPServerLowRequestRate
+        expr: rate(mcp_requests_total[10m]) < 0.1
+        for: 10m
+        labels:
+          severity: info
+          service: business
+        annotations:
+          summary: "MCP Server low request rate"
+          description: "MCP Server {{ $labels.instance }} request rate is {{ $value }} requests/second, indicating potential service issues."
+
+      # Tool usage patterns
+      - alert: MCPServerToolFailureRate
+        expr: |
+          (
+            rate(mcp_tool_calls_total{status="error"}[10m]) /
+            rate(mcp_tool_calls_total[10m])
+          ) * 100 > 15
+        for: 5m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "MCP Server high tool failure rate"
+          description: "MCP Server {{ $labels.instance }} tool failure rate is {{ $value }}%."
+
+      # Agent session duration anomalies
+      - alert: MCPServerShortAgentSessions
+        expr: histogram_quantile(0.5, rate(mcp_agent_session_duration_seconds_bucket[10m])) < 60
+        for: 10m
+        labels:
+          severity: info
+          service: business
+        annotations:
+          summary: "MCP Server short agent sessions"
+          description: "Median agent session duration is {{ $value }} seconds, indicating potential connectivity issues."

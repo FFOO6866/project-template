@@ -1,0 +1,193 @@
+# syntax=docker/dockerfile:1
+# ============================================================================
+# Horme POV Nexus Multi-Channel Platform - UV-Optimized
+# ============================================================================
+#
+# Production-ready Nexus platform with UV for multi-channel deployment
+# Supports: API + CLI + MCP + Web interfaces
+#
+# Build: docker build -f Dockerfile.nexus.uv -t horme-nexus:uv .
+# Run:   docker run -p 8000:8000 --env-file .env.production horme-nexus:uv
+#
+# Modes:
+#   api-only: docker run ... horme-nexus:uv api-only
+#   mcp-only: docker run ... horme-nexus:uv mcp-only
+#   cli:      docker run ... horme-nexus:uv cli <command>
+#   health:   docker run ... horme-nexus:uv health
+#
+# ============================================================================
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM python:3.11-slim AS builder
+
+# Build arguments for metadata
+ARG BUILD_VERSION=latest
+ARG BUILD_DATE
+ARG BUILD_REVISION
+
+# Install UV package manager
+COPY --from=ghcr.io/astral-sh/uv:0.5.17 /uv /uvx /bin/
+
+# UV environment variables
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_SYSTEM_PYTHON=0
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml README.md ./
+
+# Create lock file if missing (should be committed in prod)
+RUN if [ ! -f uv.lock ]; then uv lock; fi
+COPY uv.lock ./
+
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
+
+# Copy application code
+COPY src/ ./src/
+COPY *.py ./
+COPY config/ ./config/ 2>/dev/null || true
+
+# Install project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+# ============================================================================
+# Stage 2: Production Runtime
+# ============================================================================
+FROM python:3.11-slim AS production
+
+# Metadata labels (follows Dockerfile.nexus pattern)
+LABEL maintainer="Horme POV Team" \
+      service="nexus" \
+      version="${BUILD_VERSION}" \
+      build-date="${BUILD_DATE}" \
+      build-revision="${BUILD_REVISION}" \
+      description="Nexus Multi-Channel Platform (API + CLI + MCP)"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create nexus user for security (follows Dockerfile.nexus pattern)
+RUN groupadd -g 1000 nexus && \
+    useradd -u 1000 -g nexus -s /bin/bash -m nexus
+
+# Create application directory structure (follows Dockerfile.nexus pattern)
+RUN mkdir -p /app/{config,data,logs,cache,uploads,temp} && \
+    chown -R nexus:nexus /app
+
+# Switch to nexus user
+USER nexus
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=builder --chown=nexus:nexus /app/.venv /app/.venv
+
+# Copy application code from builder
+COPY --from=builder --chown=nexus:nexus /app/src /app/src
+COPY --from=builder --chown=nexus:nexus /app/*.py /app/
+COPY --from=builder --chown=nexus:nexus /app/config /app/config 2>/dev/null || true
+
+# Set production environment variables
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONOPTIMIZE=1 \
+    PYTHONPATH=/app \
+    VIRTUAL_ENV=/app/.venv \
+    NEXUS_HOME=/app \
+    NEXUS_CONFIG_DIR=/app/config \
+    NEXUS_DATA_DIR=/app/data \
+    NEXUS_LOG_DIR=/app/logs \
+    ENVIRONMENT=production
+
+# Create Nexus startup script (follows Dockerfile.nexus pattern)
+RUN echo '#!/bin/bash' > ./start-nexus.sh && \
+    echo 'set -e' >> ./start-nexus.sh && \
+    echo 'echo "🚀 Starting Nexus Multi-Channel Platform..."' >> ./start-nexus.sh && \
+    echo 'echo "🔍 Validating environment..."' >> ./start-nexus.sh && \
+    echo 'python -c "from src.core.config import config; print(\"✅ Configuration loaded successfully\")"' >> ./start-nexus.sh && \
+    echo 'echo "🎯 Launching Nexus platform..."' >> ./start-nexus.sh && \
+    echo '# ✅ PRODUCTION: Uses src.core.config for all configuration' >> ./start-nexus.sh && \
+    echo 'exec python src/nexus_production_api.py' >> ./start-nexus.sh
+
+# Make startup script executable
+RUN chmod +x ./start-nexus.sh
+
+# Create health check script (follows Dockerfile.nexus pattern)
+RUN echo '#!/bin/bash' > ./health-check.sh && \
+    echo 'set -e' >> ./health-check.sh && \
+    echo '# Check API if enabled' >> ./health-check.sh && \
+    echo 'if [ "${NEXUS_ENABLE_API:-true}" = "true" ]; then' >> ./health-check.sh && \
+    echo '    curl -f http://localhost:${API_PORT:-8000}/health || exit 1' >> ./health-check.sh && \
+    echo 'fi' >> ./health-check.sh && \
+    echo '# Check MCP if enabled' >> ./health-check.sh && \
+    echo 'if [ "${NEXUS_ENABLE_MCP:-false}" = "true" ]; then' >> ./health-check.sh && \
+    echo '    curl -f http://localhost:${MCP_PORT:-3001}/health || exit 1' >> ./health-check.sh && \
+    echo 'fi' >> ./health-check.sh && \
+    echo 'echo "✅ All services healthy"' >> ./health-check.sh
+
+RUN chmod +x ./health-check.sh
+
+# Expose ports (follows Dockerfile.nexus pattern)
+EXPOSE 8000 3001 9090 8080
+
+# Health check (follows Dockerfile.nexus pattern)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ./health-check.sh
+
+# Multi-mode entrypoint (follows Dockerfile.nexus pattern)
+# Supports: default, api-only, mcp-only, cli, health
+ENTRYPOINT ["bash", "-c", "\
+case \"$1\" in \
+  api-only) export NEXUS_ENABLE_MCP=false; exec ./start-nexus.sh ;; \
+  mcp-only) export NEXUS_ENABLE_API=false; exec ./start-nexus.sh ;; \
+  cli) exec python -m src.production_cli_interface \"${@:2}\" ;; \
+  health) exec ./health-check.sh ;; \
+  *) exec ./start-nexus.sh \"$@\" ;; \
+esac", "--"]
+
+# Default command
+CMD []
+
+# ============================================================================
+# Usage Examples
+# ============================================================================
+#
+# Full platform (API + MCP):
+#   docker run -p 8000:8000 -p 3001:3001 --env-file .env.production horme-nexus:uv
+#
+# API only:
+#   docker run -p 8000:8000 --env-file .env.production horme-nexus:uv api-only
+#
+# MCP only:
+#   docker run -p 3001:3001 --env-file .env.production horme-nexus:uv mcp-only
+#
+# CLI mode:
+#   docker run --env-file .env.production horme-nexus:uv cli search "power drill"
+#
+# Health check:
+#   docker run --env-file .env.production horme-nexus:uv health
+#
+# ============================================================================

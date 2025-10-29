@@ -1,0 +1,350 @@
+# Falco Security Rules for Horme POV
+# Runtime security monitoring and threat detection
+
+# Macro definitions for Horme-specific processes
+- macro: horme_containers
+  condition: >
+    container.image.repository in (horme-app, horme-frontend, horme-postgres, 
+    horme-neo4j, horme-redis, horme-chromadb, horme-traefik, horme-prometheus, 
+    horme-grafana, horme-vault)
+
+- macro: horme_sensitive_files
+  condition: >
+    fd.name startswith /app/config/ or
+    fd.name startswith /app/secrets/ or
+    fd.name startswith /etc/ssl/ or
+    fd.name contains ".env" or
+    fd.name contains "password" or
+    fd.name contains "secret" or
+    fd.name contains "key"
+
+- macro: horme_admin_activities
+  condition: >
+    proc.name in (kubectl, docker, docker-compose, systemctl, service) or
+    proc.cmdline contains "neo4j-admin" or
+    proc. startswith "pg_"
+
+# =============================================================================
+# CONTAINER SECURITY RULES
+# =============================================================================
+
+- rule: Unauthorized Process in Horme Container
+  desc: Detect unexpected processes running in Horme containers
+  condition: >
+    spawned_process and 
+    horme_containers and 
+    not proc.name in (node, java, python, python3, postgres, neo4j, redis-server, 
+    traefik, prometheus, grafana-server, vault, nginx, haproxy, bash, sh, curl, 
+    wget, ps, top, cat, ls, grep, tail, head, find)
+  output: >
+    Unauthorized process in Horme container 
+    (container=%container.name image=%container.image.repository 
+    process=%proc.name cmdline=%proc.cmdline user=%user.name)
+  priority: WARNING
+  tags: [container, process, horme]
+
+- rule: Horme Container Drift Detection
+  desc: Detect file modifications in Horme containers
+  condition: >
+    open_write and 
+    horme_containers and 
+    not fd.name startswith /tmp/ and 
+    not fd.name startswith /var/tmp/ and
+    not fd.name startswith /app/logs/ and
+    not fd.name startswith /app/data/ and
+    not fd.name startswith /var/lib/postgresql/data/ and
+    not fd.name startswith /data/ and
+    not fd.name startswith /logs/
+  output: >
+    File modification in Horme container 
+    (container=%container.name file=%fd.name process=%proc.name user=%user.name)
+  priority: INFO
+  tags: [container, filesystem, horme]
+
+- rule: Horme Container Privileged Operation
+  desc: Detect privileged operations in Horme containers
+  condition: >
+    spawned_process and 
+    horme_containers and 
+    proc.name in (sudo, su, chroot, mount, umount, modprobe, rmmod, insmod) and
+    not container.name in (horme-vault, horme-falco)
+  output: >
+    Privileged operation in Horme container 
+    (container=%container.name process=%proc.name cmdline=%proc.cmdline user=%user.name)
+  priority: HIGH
+  tags: [container, privilege, horme]
+
+# =============================================================================
+# DATABASE SECURITY RULES
+# =============================================================================
+
+- rule: PostgreSQL Unauthorized Access
+  desc: Detect unauthorized access to PostgreSQL
+  condition: >
+    spawned_process and 
+    container.name contains "postgres" and 
+    proc.name in (psql, pg_dump, pg_restore, pg_dumpall) and
+    not user.name in (postgres, horme_user, backup_user)
+  output: >
+    Unauthorized PostgreSQL access 
+    (container=%container.name process=%proc.name user=%user.name cmdline=%proc.cmdline)
+  priority: HIGH
+  tags: [database, postgresql, unauthorized, horme]
+
+- rule: Neo4j Unauthorized Access
+  desc: Detect unauthorized access to Neo4j
+  condition: >
+    spawned_process and 
+    container.name contains "neo4j" and 
+    proc.name in (cypher-shell, neo4j-admin, neo4j-import) and
+    not user.name in (neo4j, backup_user)
+  output: >
+    Unauthorized Neo4j access 
+    (container=%container.name process=%proc.name user=%user.name cmdline=%proc.cmdline)
+  priority: HIGH
+  tags: [database, neo4j, unauthorized, horme]
+
+- rule: Database Configuration Change
+  desc: Detect changes to database configuration files
+  condition: >
+    open_write and 
+    (container.name contains "postgres" or container.name contains "neo4j" or container.name contains "redis") and
+    (fd.name contains "conf" or fd.name contains "config" or fd.name endswith ".cnf")
+  output: >
+    Database configuration file modified 
+    (container=%container.name file=%fd.name process=%proc.name user=%user.name)
+  priority: WARNING
+  tags: [database, configuration, horme]
+
+# =============================================================================
+# NETWORK SECURITY RULES
+# =============================================================================
+
+- rule: Unexpected Outbound Connection from Horme
+  desc: Detect unexpected outbound network connections
+  condition: >
+    outbound and 
+    horme_containers and 
+    not fd.net.cip in (
+      "127.0.0.1", "::1",                    # Localhost
+      "172.20.0.0/16", "172.21.0.0/16",     # Docker networks
+      "10.0.0.0/8", "192.168.0.0/16"        # Private networks
+    ) and
+    not fd.sport in (80, 443, 53, 123) and   # Common outbound ports
+    not proc.name in (curl, wget, apt, yum, pip, npm)
+  output: >
+    Unexpected outbound connection from Horme container 
+    (container=%container.name dest=%fd.net.cip:%fd.net.cport 
+    process=%proc.name user=%user.name)
+  priority: WARNING
+  tags: [network, outbound, horme]
+
+- rule: Horme Port Scanning Detection
+  desc: Detect potential port scanning activities
+  condition: >
+    inbound and 
+    fd.net.sport_range in (1-1023) and 
+    evt.count > 10 and 
+    evt.delta < 60000000000  # 60 seconds
+  output: >
+    Potential port scanning detected 
+    (source=%fd.net.cip target_container=%container.name ports_accessed=%fd.net.sport)
+  priority: HIGH
+  tags: [network, scanning, security, horme]
+
+# =============================================================================
+# APPLICATION SECURITY RULES
+# =============================================================================
+
+- rule: Horme Application Sensitive File Access
+  desc: Detect access to sensitive files in Horme applications
+  condition: >
+    open_read and 
+    horme_containers and 
+    horme_sensitive_files and
+    not proc.name in (node, python, python3, java, vault, postgres, neo4j)
+  output: >
+    Sensitive file accessed in Horme application 
+    (container=%container.name file=%fd.name process=%proc.name user=%user.name)
+  priority: HIGH
+  tags: [application, sensitive, files, horme]
+
+- rule: Horme API Anomaly Detection
+  desc: Detect unusual API request patterns
+  condition: >
+    spawned_process and 
+    container.name = "horme-app" and 
+    proc.cmdline contains "curl" and 
+    (proc.cmdline contains "/admin/" or 
+     proc.cmdline contains "/debug/" or 
+     proc.cmdline contains "/internal/")
+  output: >
+    Unusual API request pattern detected 
+    (container=%container.name cmdline=%proc.cmdline user=%user.name)
+  priority: WARNING
+  tags: [api, anomaly, horme]
+
+- rule: Horme MCP Protocol Abuse
+  desc: Detect potential MCP protocol abuse
+  condition: >
+    spawned_process and 
+    container.name = "horme-app" and 
+    proc.name in (nc, netcat, socat, telnet) and
+    proc.cmdline contains "3001"  # MCP port
+  output: >
+    Potential MCP protocol abuse detected 
+    (container=%container.name process=%proc.name cmdline=%proc.cmdline user=%user.name)
+  priority: HIGH
+  tags: [mcp, protocol, abuse, horme]
+
+# =============================================================================
+# SECRETS AND CREDENTIALS RULES
+# =============================================================================
+
+- rule: Horme Secrets Exposure
+  desc: Detect potential secrets exposure in logs or files
+  condition: >
+    open_write and 
+    horme_containers and 
+    (fd.name contains "log" or fd.name contains "debug") and
+    (proc.cmdline contains "password" or 
+     proc.cmdline contains "secret" or 
+     proc.cmdline contains "token" or 
+     proc.cmdline contains "key")
+  output: >
+    Potential secrets exposure in Horme application 
+    (container=%container.name file=%fd.name process=%proc.name cmdline=%proc.cmdline)
+  priority: HIGH
+  tags: [secrets, exposure, logs, horme]
+
+- rule: Vault Unauthorized Access
+  desc: Detect unauthorized access to Vault
+  condition: >
+    spawned_process and 
+    container.name contains "vault" and 
+    proc.name = "vault" and 
+    not proc.cmdline contains "server"
+  output: >
+    Unauthorized Vault CLI access 
+    (container=%container.name cmdline=%proc.cmdline user=%user.name)
+  priority: HIGH
+  tags: [vault, unauthorized, secrets, horme]
+
+# =============================================================================
+# COMPLIANCE AND AUDIT RULES
+# =============================================================================
+
+- rule: Horme Admin Activity Logging
+  desc: Log administrative activities for compliance
+  condition: >
+    spawned_process and 
+    horme_containers and 
+    horme_admin_activities
+  output: >
+    Administrative activity in Horme environment 
+    (container=%container.name process=%proc.name cmdline=%proc.cmdline user=%user.name)
+  priority: INFO
+  tags: [admin, compliance, audit, horme]
+
+- rule: Horme File Permission Changes
+  desc: Detect file permission changes
+  condition: >
+    spawned_process and 
+    horme_containers and 
+    proc.name in (chmod, chown, chgrp) and
+    not fd.name startswith "/tmp/"
+  output: >
+    File permissions changed in Horme container 
+    (container=%container.name process=%proc.name target=%proc.args user=%user.name)
+  priority: WARNING
+  tags: [permissions, filesystem, horme]
+
+- rule: Horme User Account Changes
+  desc: Detect user account modifications
+  condition: >
+    spawned_process and 
+    horme_containers and 
+    proc.name in (useradd, userdel, usermod, passwd, groupadd, groupdel, groupmod)
+  output: >
+    User account modification in Horme container 
+    (container=%container.name process=%proc.name args=%proc.args user=%user.name)
+  priority: HIGH
+  tags: [users, accounts, security, horme]
+
+# =============================================================================
+# PERFORMANCE AND AVAILABILITY RULES
+# =============================================================================
+
+- rule: Horme Resource Exhaustion
+  desc: Detect potential resource exhaustion attacks
+  condition: >
+    spawned_process and 
+    horme_containers and 
+    proc.name in (dd, yes, fork, stress, stress-ng) and
+    not container.name contains "test"
+  output: >
+    Potential resource exhaustion in Horme container 
+    (container=%container.name process=%proc.name cmdline=%proc.cmdline user=%user.name)
+  priority: HIGH
+  tags: [resource, exhaustion, dos, horme]
+
+- rule: Horme Critical Process Termination
+  desc: Detect termination of critical Horme processes
+  condition: >
+    proc_exit and 
+    horme_containers and 
+    proc.name in (node, java, python, python3, postgres, neo4j, redis-server, 
+    traefik, prometheus, grafana-server, vault) and
+    proc.exit_code != 0
+  output: >
+    Critical Horme process terminated unexpectedly 
+    (container=%container.name process=%proc.name exit_code=%proc.exit_code)
+  priority: HIGH
+  tags: [process, termination, availability, horme]
+
+# =============================================================================
+# CUSTOM HORME BUSINESS LOGIC RULES
+# =============================================================================
+
+- rule: Horme RAG System Abuse
+  desc: Detect potential abuse of RAG system
+  condition: >
+    spawned_process and 
+    container.name = "horme-app" and 
+    proc.cmdline contains "/api/rag/" and
+    evt.count > 100 and 
+    evt.delta < 300000000000  # 5 minutes
+  output: >
+    Potential RAG system abuse detected 
+    (container=%container.name excessive_requests=%evt.count user=%user.name)
+  priority: WARNING
+  tags: [rag, abuse, api, horme]
+
+- rule: Horme Scraping System Anomaly
+  desc: Detect anomalous scraping activities
+  condition: >
+    spawned_process and 
+    container.name = "horme-app" and 
+    proc.cmdline contains "scraping" and
+    proc.name in (curl, wget, python, python3) and
+    evt.count > 50 and 
+    evt.delta < 600000000000  # 10 minutes
+  output: >
+    Anomalous scraping activity detected 
+    (container=%container.name process=%proc.name requests=%evt.count)
+  priority: WARNING
+  tags: [scraping, anomaly, rate-limit, horme]
+
+- rule: Horme Knowledge Graph Tampering
+  desc: Detect potential knowledge graph tampering
+  condition: >
+    spawned_process and 
+    container.name contains "neo4j" and 
+    proc.cmdline contains "DELETE" and
+    evt.count > 10 and 
+    evt.delta < 60000000000  # 1 minute
+  output: >
+    Potential knowledge graph tampering detected 
+    (container=%container.name delete_operations=%evt.count user=%user.name)
+  priority: HIGH
+  tags: [neo4j, tampering, data-integrity, horme]

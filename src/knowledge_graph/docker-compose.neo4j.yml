@@ -1,0 +1,171 @@
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: horme-neo4j
+    ports:
+      - "7474:7474"    # HTTP
+      - "7687:7687"    # Bolt
+    environment:
+      # Authentication
+      NEO4J_AUTH: neo4j/horme_knowledge_2024
+      
+      # Memory settings for optimal performance
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 2G
+      NEO4J_server_memory_pagecache_size: 1G
+      
+      # Database settings
+      NEO4J_server_default__database: horme_knowledge
+      NEO4J_server_databases_default__to__read__only: false
+      
+      # Performance tuning
+      NEO4J_server_db_query_cache__size: 25
+      NEO4J_server_db_query_cache__ttl: 70s
+      
+      # Security and network
+      NEO4J_server_bolt_listen__address: 0.0.0.0:7687
+      NEO4J_server_http_listen__address: 0.0.0.0:7474
+      NEO4J_server_https_listen__address: 0.0.0.0:7473
+      
+      # Enable APOC procedures for advanced operations
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_server_config_strict__validation_enabled: false
+      
+      # Logging
+      NEO4J_server_logs_debug_level: INFO
+      
+    volumes:
+      # Persistent data storage
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+      
+      # Configuration files
+      - ./config/neo4j.conf:/var/lib/neo4j/conf/neo4j.conf:ro
+      - ./scripts/init-knowledge-graph.cypher:/var/lib/neo4j/import/init-knowledge-graph.cypher:ro
+      
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7474/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    networks:
+      - horme-knowledge-network
+    
+    labels:
+      - "com.horme.service=neo4j"
+      - "com.horme.environment=development"
+
+  # Vector database for semantic search (ChromaDB)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: horme-chromadb
+    ports:
+      - "8000:8000"
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - CHROMA_SERVER_GRPC_PORT=50051
+      - PERSIST_DIRECTORY=/chroma/chroma
+    volumes:
+      - chromadb_data:/chroma/chroma
+    restart: unless-stopped
+    networks:
+      - horme-knowledge-network
+    labels:
+      - "com.horme.service=chromadb"
+      - "com.horme.environment=development"
+
+  # Redis for caching and session management
+  redis-knowledge:
+    image: redis:7-alpine
+    container_name: horme-redis-knowledge
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    command: redis-server --appendonly yes --requirepass horme_redis_2024
+    volumes:
+      - redis_knowledge_data:/data
+    restart: unless-stopped
+    networks:
+      - horme-knowledge-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.horme.service=redis-knowledge"
+      - "com.horme.environment=development"
+
+  # Knowledge graph API service
+  knowledge-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.knowledge-api
+    container_name: horme-knowledge-api
+    ports:
+      - "8001:8000"
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=horme_knowledge_2024
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - REDIS_URL=redis://:horme_redis_2024@redis-knowledge:6379/0
+      - POSTGRES_URL=postgresql://horme_user:horme_password_2024@host.docker.internal:5432/horme_database
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENVIRONMENT=development
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+      redis-knowledge:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - horme-knowledge-network
+    volumes:
+      - ./logs:/app/logs
+    labels:
+      - "com.horme.service=knowledge-api"
+      - "com.horme.environment=development"
+
+volumes:
+  neo4j_data:
+    driver: local
+    labels:
+      - "com.horme.volume=neo4j-data"
+  neo4j_logs:
+    driver: local
+    labels:
+      - "com.horme.volume=neo4j-logs"
+  neo4j_import:
+    driver: local
+    labels:
+      - "com.horme.volume=neo4j-import"
+  neo4j_plugins:
+    driver: local
+    labels:
+      - "com.horme.volume=neo4j-plugins"
+  chromadb_data:
+    driver: local
+    labels:
+      - "com.horme.volume=chromadb-data"
+  redis_knowledge_data:
+    driver: local
+    labels:
+      - "com.horme.volume=redis-knowledge-data"
+
+networks:
+  horme-knowledge-network:
+    driver: bridge
+    labels:
+      - "com.horme.network=knowledge-graph"

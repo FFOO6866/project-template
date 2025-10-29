@@ -1,0 +1,47 @@
+{
+  "file_info": {
+    "path": "C:\\Users\\fujif\\OneDrive\\Documents\\GitHub\\horme-pov\\docs\\reference\\ProductData (Top 3 Cats).xlsx",
+    "total_rows": 17266,
+    "total_columns": 5,
+    "column_names": [
+      "Product SKU",
+      "Description",
+      "Category ",
+      "Brand ",
+      "CatalogueItemID"
+    ]
+  },
+  "data_quality": {
+    "Product SKU": {
+      "missing_count": "0",
+      "missing_percentage": 0.0,
+      "unique_values": 17266,
+      "data_type": "object"
+    },
+    "Description": {
+      "missing_count": "0",
+      "missing_percentage": 0.0,
+      "unique_values": 17126,
+      "data_type": "object"
+    },
+    "Category ": {
+      "missing_count": "0",
+      "missing_percentage": 0.0,
+      "unique_values": 3,
+      "data_type": "object"
+    },
+    "Brand ": {
+      "missing_count": "0",
+      "missing_percentage": 0.0,
+      "unique_values": 289,
+      "data_type": "object"
+    },
+    "CatalogueItemID": {
+      "missing_count": "8220",
+      "missing_percentage": 47.61,
+      "unique_values": 5822,
+      "data_type": "float64"
+    }
+  },
+  "duplicates": "0"
+}

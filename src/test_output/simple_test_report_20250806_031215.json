@@ -1,0 +1,26 @@
+{
+  "test_summary": {
+    "total_tests": 4,
+    "passed_tests": 4,
+    "success_rate": 1.0,
+    "timestamp": "2025-08-06T03:12:15.669871"
+  },
+  "individual_results": [
+    {
+      "test_name": "Community Extraction",
+      "success": true
+    },
+    {
+      "test_name": "Product Matching",
+      "success": true
+    },
+    {
+      "test_name": "Project Guide Generation",
+      "success": true
+    },
+    {
+      "test_name": "End-to-End Integration",
+      "success": true
+    }
+  ]
+}

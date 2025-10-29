@@ -1,0 +1,41 @@
+{
+  "sku": "DRILL-001",
+  "name": "Professional Cordless Drill 18V",
+  "brand": "Bosch",
+  "price": "S$189.99",
+  "description": "High-performance cordless drill with lithium-ion battery",
+  "specifications": {
+    "Voltage": "18V",
+    "Chuck Size": "13mm",
+    "Weight": "1.8kg",
+    "Battery Type": "Li-ion",
+    "Torque": "65 Nm"
+  },
+  "technical_specs": {
+    "No-load Speed": "0-450/0-1500 rpm",
+    "Impact Rate": "0-6750/0-22500 bpm",
+    "Chuck Type": "Keyless"
+  },
+  "images": [
+    "https://example.com/drill-main.jpg",
+    "https://example.com/drill-side.jpg"
+  ],
+  "datasheets": [
+    "https://example.com/drill-datasheet.pdf"
+  ],
+  "manuals": [
+    "https://example.com/drill-manual.pdf"
+  ],
+  "categories": [
+    "Power Tools",
+    "Drills",
+    "Cordless Tools"
+  ],
+  "compatibility": [
+    "18V Battery System",
+    "Quick Chuck Accessories"
+  ],
+  "availability": "In Stock",
+  "supplier_url": "https://example.com/product/drill-001",
+  "scraped_at": "2025-08-05T22:24:44.369934"
+}

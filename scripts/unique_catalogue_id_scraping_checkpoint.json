@@ -1,0 +1,12 @@
+{
+  "last_product_id": 1919,
+  "timestamp": 1761178176.4752758,
+  "stats": {
+    "products_processed": 60,
+    "products_with_prices": 0,
+    "products_updated": 0,
+    "products_not_found": 60,
+    "errors": 0,
+    "start_time": 1761177959.911865
+  }
+}

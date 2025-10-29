@@ -1,0 +1,52 @@
+# Testing Infrastructure Requirements
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-timeout>=2.1.0
+pytest-xdist>=3.0.0
+pytest-cov>=4.0.0
+
+# Database testing
+psycopg2-binary>=2.9.0
+redis>=4.0.0
+pymongo>=4.0.0
+mysql-connector-python>=8.0.0
+
+# Object storage testing
+minio>=7.0.0
+boto3>=1.26.0
+
+# HTTP and API testing
+httpx>=0.24.0
+requests>=2.31.0
+websockets>=11.0.0
+
+# Performance testing
+pytest-benchmark>=4.0.0
+locust>=2.15.0
+
+# Test data and fixtures
+faker>=19.0.0
+factory-boy>=3.3.0
+freezegun>=1.2.0
+
+# SDK dependencies
+kailash>=0.1.0
+
+# Data handling
+pandas>=2.0.0
+numpy>=1.24.0
+sqlalchemy>=2.0.0
+
+# Async support
+asyncio-mqtt>=0.16.0
+aiofiles>=23.0.0
+aioredis>=2.0.0
+
+# Development and debugging
+ipython>=8.0.0
+ipdb>=0.13.0
+rich>=13.0.0
+
+# Documentation testing
+doctest>=0.6.1

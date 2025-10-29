@@ -1,0 +1,132 @@
+{
+  "test_metadata": {
+    "timestamp": "2025-08-05T22:25:28.314076",
+    "brands_tested": [
+      "3M",
+      "Bosch",
+      "Karcher",
+      "DeWalt",
+      "Stanley"
+    ],
+    "test_stages": [
+      "discovery",
+      "scraping_setup",
+      "integration"
+    ]
+  },
+  "stage_results": {
+    "discovery": {
+      "successful": 5,
+      "total": 5,
+      "success_rate": 100.0,
+      "details": {
+        "3M": {
+          "brand": "3M",
+          "official_website": "https://www.3m.com.sg",
+          "singapore_distributor": "https://www.3m.com.sg",
+          "product_catalog_url": "https://www.3m.com.sg/3M/en_SG/p/",
+          "technical_docs_section": "https://www.3m.com.sg/3M/en_SG/safety-centers/",
+          "contact_info": {},
+          "product_categories": [
+            "Safety Equipment",
+            "Industrial Tapes",
+            "Abrasives",
+            "Adhesives"
+          ],
+          "last_verified": "2025-08-05T22:25:28.314076"
+        },
+        "Bosch": {
+          "brand": "Bosch",
+          "official_website": "https://www.bosch.com.sg",
+          "singapore_distributor": "https://www.bosch.com.sg",
+          "product_catalog_url": "https://www.bosch.com.sg/products/",
+          "technical_docs_section": "https://www.bosch.com.sg/service-support/",
+          "contact_info": {},
+          "product_categories": [
+            "Power Tools",
+            "Hand Tools",
+            "Measuring Tools",
+            "Garden Tools"
+          ],
+          "last_verified": "2025-08-05T22:25:28.314076"
+        },
+        "Karcher": {
+          "brand": "Karcher",
+          "official_website": "https://www.karcher.com.sg",
+          "singapore_distributor": "https://www.karcher.com.sg",
+          "product_catalog_url": "https://www.karcher.com.sg/products/",
+          "technical_docs_section": "https://www.karcher.com.sg/service/",
+          "contact_info": {},
+          "product_categories": [
+            "Cleaning Equipment",
+            "Pressure Washers",
+            "Vacuum Cleaners"
+          ],
+          "last_verified": "2025-08-05T22:25:28.314076"
+        },
+        "DeWalt": {
+          "brand": "DeWalt",
+          "official_website": "https://www.dewalt.com.sg",
+          "singapore_distributor": "https://www.dewalt.com.sg",
+          "product_catalog_url": "https://www.dewalt.com.sg/products/",
+          "technical_docs_section": "https://www.dewalt.com.sg/support/",
+          "contact_info": {},
+          "product_categories": [
+            "Power Tools",
+            "Hand Tools",
+            "Storage",
+            "Accessories"
+          ],
+          "last_verified": "2025-08-05T22:25:28.314076"
+        },
+        "Stanley": {
+          "brand": "Stanley",
+          "official_website": "https://www.stanleytools.com.sg",
+          "singapore_distributor": "https://www.stanleytools.com.sg",
+          "product_catalog_url": "https://www.stanleytools.com.sg/products/",
+          "technical_docs_section": "https://www.stanleytools.com.sg/support/",
+          "contact_info": {},
+          "product_categories": [
+            "Hand Tools",
+            "Power Tools",
+            "Storage",
+            "Measuring Tools"
+          ],
+          "last_verified": "2025-08-05T22:25:28.314076"
+        }
+      }
+    },
+    "scraping_setup": {
+      "scrapers_available": 3,
+      "scraper_details": {
+        "Bosch": "https://www.bosch.com.sg",
+        "Karcher": "https://www.karcher.com.sg",
+        "3M": "https://www.3m.com.sg"
+      },
+      "setup_successful": true
+    },
+    "integration": {
+      "successful": true,
+      "discovered_brands": [
+        "3M",
+        "Bosch",
+        "Karcher",
+        "DeWalt",
+        "Stanley"
+      ],
+      "available_scrapers": [
+        "Bosch",
+        "Karcher",
+        "3M"
+      ],
+      "integration_ready": true
+    }
+  },
+  "summary": {
+    "overall_success": true,
+    "discovery_rate": 100.0,
+    "scrapers_ready": true,
+    "integration_ready": true,
+    "system_status": "READY"
+  }
+}

@@ -1,0 +1,237 @@
+# Production Prometheus Configuration for Horme POV
+# Comprehensive monitoring for all services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'horme-production'
+    cluster: 'horme-pov-01'
+    replica: 'prometheus-01'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      timeout: 10s
+      api_version: v2
+
+# Load alerting rules
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+# Scrape configurations for all services
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # Main Horme Application
+  - job_name: 'horme-app'
+    static_configs:
+      - targets: ['horme-app:9090']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'horme_.*'
+        target_label: service
+        replacement: 'horme-app'
+
+  # Frontend Application
+  - job_name: 'horme-frontend'
+    static_configs:
+      - targets: ['horme-frontend:3000']
+    scrape_interval: 30s
+    metrics_path: /api/metrics
+    scrape_timeout: 10s
+
+  # PostgreSQL Primary Database
+  - job_name: 'postgres-primary'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+    params:
+      collect[]:
+        - 'pg_stat_database'
+        - 'pg_stat_user_tables'
+        - 'pg_stat_bgwriter'
+        - 'pg_locks'
+        - 'pg_stat_replication'
+
+  # PostgreSQL Read Replica
+  - job_name: 'postgres-replica'
+    static_configs:
+      - targets: ['postgres-replica:5432']
+    scrape_interval: 30s
+    params:
+      collect[]:
+        - 'pg_stat_database'
+        - 'pg_stat_user_tables'
+        - 'pg_replication'
+
+  # Neo4j Knowledge Graph
+  - job_name: 'neo4j'
+    static_configs:
+      - targets: ['neo4j:7474']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 15s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'neo4j_.*'
+        target_label: database
+        replacement: 'neo4j'
+
+  # Redis Cache
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # ChromaDB Vector Database
+  - job_name: 'chromadb'
+    static_configs:
+      - targets: ['chromadb:8000']
+    scrape_interval: 30s
+    metrics_path: /api/v1/metrics
+    scrape_timeout: 10s
+
+  # Traefik Reverse Proxy
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8082']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # HAProxy Load Balancer
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['haproxy:8404']
+    scrape_interval: 30s
+    metrics_path: /stats?stats;csv
+    scrape_timeout: 10s
+
+  # Grafana Dashboard
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # Alertmanager
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # Elasticsearch
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 30s
+    metrics_path: /_prometheus/metrics
+    scrape_timeout: 15s
+    basic_auth:
+      username: elastic
+      password_file: /etc/prometheus/secrets/elastic_password
+
+  # Jaeger Tracing
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # Node Exporter for Host Metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # cAdvisor for Container Metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Backup Services Monitoring
+  - job_name: 'postgres-backup'
+    static_configs:
+      - targets: ['postgres-backup:8080']
+    scrape_interval: 60s
+    scrape_timeout: 15s
+
+  # Security Monitoring
+  - job_name: 'vault'
+    static_configs:
+      - targets: ['vault:8200']
+    scrape_interval: 30s
+    metrics_path: /v1/sys/metrics
+    scrape_timeout: 10s
+    params:
+      format: ['prometheus']
+
+# Storage configuration for production
+storage:
+  tsdb:
+    path: /prometheus
+    retention.time: 30d
+    retention.size: 50GB
+    min-block-duration: 2h
+    max-block-duration: 25h
+    no-lockfile: false
+    allow-overlapping-blocks: false
+    wal-compression: true
+
+# Remote write configuration for long-term storage
+remote_write:
+  - url: "${REMOTE_WRITE_URL}"
+    name: "horme-remote-storage"
+    remote_timeout: 30s
+    queue_config:
+      capacity: 2500
+      max_shards: 1000
+      min_shards: 1
+      max_samples_per_send: 500
+      batch_send_deadline: 5s
+      min_backoff: 30ms
+      max_backoff: 100ms
+    metadata_config:
+      send: true
+      send_interval: 1m
+    basic_auth:
+      username: "${REMOTE_WRITE_USERNAME}"
+      password_file: /etc/prometheus/secrets/remote_write_password
+
+# Web configuration
+web:
+  console.libraries: /etc/prometheus/console_libraries
+  console.templates: /etc/prometheus/consoles
+  enable-lifecycle: true
+  enable-admin-api: false
+  page-title: "Horme POV Prometheus"
+  cors.origin: ".*"
+  external-url: "https://prometheus.${DOMAIN}"
+
+# Feature flags
+feature_flags:
+  - promql-at-modifier
+  - remote-write-receiver

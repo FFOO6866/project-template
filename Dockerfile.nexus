@@ -91,69 +91,29 @@ COPY --chown=nexus:nexus *.py ./
 COPY --chown=nexus:nexus config/ ./config/
 
 # Create Nexus startup script
-RUN cat > ./start-nexus.sh << 'EOF'
-#!/bin/bash
-set -e
-
-echo "🚀 Starting Nexus Multi-Channel Platform..."
-
-# Environment validation
-echo "🔍 Validating environment..."
-python -c "
-import os, sys
-required_vars = ['DATABASE_URL', 'REDIS_URL', 'NEXUS_JWT_SECRET']
-missing = [var for var in required_vars if not os.getenv(var)]
-if missing:
-    print(f'❌ Missing required environment variables: {missing}')
-    sys.exit(1)
-print('✅ Environment validation passed')
-"
-
-# Database migration
-echo "🗄️ Running database migrations..."
-python -c "
-try:
-    from src.dataflow_classification_models import initialize_database
-    initialize_database()
-    print('✅ Database initialization completed')
-except Exception as e:
-    print(f'⚠️  Database initialization warning: {e}')
-"
-
-# Start services based on configuration
-if [ "${NEXUS_ENABLE_API:-true}" = "true" ]; then
-    echo "🌐 Starting API server on port ${NEXUS_API_PORT:-8000}..."
-fi
-
-if [ "${NEXUS_ENABLE_MCP:-true}" = "true" ]; then
-    echo "🤖 Starting MCP server on port ${NEXUS_MCP_PORT:-3001}..."
-fi
-
-# Start the main Nexus platform
-echo "🎯 Launching Nexus platform..."
-exec python start_nexus_platform.py
-EOF
+RUN echo '#!/bin/bash' > ./start-nexus.sh && \
+    echo 'set -e' >> ./start-nexus.sh && \
+    echo 'echo "🚀 Starting Nexus Multi-Channel Platform..."' >> ./start-nexus.sh && \
+    echo 'echo "🔍 Validating environment..."' >> ./start-nexus.sh && \
+    echo 'python -c "import os, sys; required_vars = [\"DATABASE_URL\", \"REDIS_URL\", \"NEXUS_JWT_SECRET\"]; missing = [var for var in required_vars if not os.getenv(var)]; sys.exit(1) if missing else print(\"✅ Environment validation passed\")"' >> ./start-nexus.sh && \
+    echo 'echo "🗄️ Running database migrations..."' >> ./start-nexus.sh && \
+    echo 'python -c "try: from src.dataflow_classification_models import initialize_database; initialize_database(); print(\"✅ Database initialization completed\"); except Exception as e: print(f\"⚠️  Database initialization warning: {e}\")"' >> ./start-nexus.sh && \
+    echo 'echo "🎯 Launching Nexus platform..."' >> ./start-nexus.sh && \
+    echo 'exec python start_nexus_platform.py' >> ./start-nexus.sh
 
 # Make startup script executable
 RUN chmod +x ./start-nexus.sh
 
 # Create health check script
-RUN cat > ./health-check.sh << 'EOF'
-#!/bin/bash
-set -e
-
-# Check API server
-if [ "${NEXUS_ENABLE_API:-true}" = "true" ]; then
-    curl -f http://localhost:${NEXUS_API_PORT:-8000}/api/health || exit 1
-fi
-
-# Check MCP server
-if [ "${NEXUS_ENABLE_MCP:-true}" = "true" ]; then
-    curl -f http://localhost:${NEXUS_MCP_PORT:-3001}/health || exit 1
-fi
-
-echo "✅ All services healthy"
-EOF
+RUN echo '#!/bin/bash' > ./health-check.sh && \
+    echo 'set -e' >> ./health-check.sh && \
+    echo 'if [ "${NEXUS_ENABLE_API:-true}" = "true" ]; then' >> ./health-check.sh && \
+    echo '    curl -f http://localhost:${NEXUS_API_PORT:-8000}/api/health || exit 1' >> ./health-check.sh && \
+    echo 'fi' >> ./health-check.sh && \
+    echo 'if [ "${NEXUS_ENABLE_MCP:-true}" = "true" ]; then' >> ./health-check.sh && \
+    echo '    curl -f http://localhost:${NEXUS_MCP_PORT:-3001}/health || exit 1' >> ./health-check.sh && \
+    echo 'fi' >> ./health-check.sh && \
+    echo 'echo "✅ All services healthy"' >> ./health-check.sh
 
 RUN chmod +x ./health-check.sh
 
