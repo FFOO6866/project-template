@@ -1,0 +1,322 @@
+version: '3.8'
+
+# ==============================================================================
+# Dynamic Job Pricing Engine - Docker Compose Configuration
+# ==============================================================================
+# IMPORTANT:
+# - All environment variables are read from .env file
+# - Same docker-compose.yml for local and server
+# - Use ENVIRONMENT variable to control production/development
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: ${COMPOSE_PROJECT_NAME:-job-pricing}-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - ${DOCKER_NETWORK:-job-pricing-network}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Redis Cache
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-job-pricing}-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - ${DOCKER_NETWORK:-job-pricing-network}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # FastAPI Application
+  # ----------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ENVIRONMENT: ${ENVIRONMENT:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-job-pricing}-api
+    environment:
+      # Environment
+      ENVIRONMENT: ${ENVIRONMENT}
+      DEBUG: ${DEBUG}
+
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      DB_POOL_SIZE: ${DB_POOL_SIZE}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW}
+
+      # Redis
+      REDIS_URL: ${REDIS_URL}
+      CACHE_TTL_SHORT: ${CACHE_TTL_SHORT}
+      CACHE_TTL_MEDIUM: ${CACHE_TTL_MEDIUM}
+      CACHE_TTL_LONG: ${CACHE_TTL_LONG}
+
+      # OpenAI - CRITICAL: Always set from .env
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL_DEFAULT: ${OPENAI_MODEL_DEFAULT}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL}
+      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}
+
+      # JWT & Security
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
+      API_KEY_SALT: ${API_KEY_SALT}
+
+      # External APIs
+      MERCER_API_KEY: ${MERCER_API_KEY}
+      MERCER_API_BASE_URL: ${MERCER_API_BASE_URL}
+      GLASSDOOR_EMAIL: ${GLASSDOOR_EMAIL}
+      GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD}
+
+      # BIPO HRIS Integration
+      BIPO_USERNAME: ${BIPO_USERNAME}
+      BIPO_PASSWORD: ${BIPO_PASSWORD}
+      BIPO_CLIENT_ID: ${BIPO_CLIENT_ID}
+      BIPO_CLIENT_SECRET: ${BIPO_CLIENT_SECRET}
+      BIPO_ENABLED: ${BIPO_ENABLED}
+
+      # Celery
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL}
+      LOG_FORMAT: ${LOG_FORMAT}
+
+      # Feature Flags
+      FEATURE_WEB_SCRAPING: ${FEATURE_WEB_SCRAPING}
+      FEATURE_MERCER_INTEGRATION: ${FEATURE_MERCER_INTEGRATION}
+      FEATURE_SSG_INTEGRATION: ${FEATURE_SSG_INTEGRATION}
+
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      - ${DOCKER_NETWORK:-job-pricing-network}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        python -m alembic upgrade head &&
+        echo 'Starting API server...' &&
+        uvicorn src.job_pricing.api.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # Celery Worker (Background Tasks)
+  # ----------------------------------------------------------------------------
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-job-pricing}-celery-worker
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      GLASSDOOR_EMAIL: ${GLASSDOOR_EMAIL}
+      GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD}
+      API_KEY_SALT: ${API_KEY_SALT}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - ${DOCKER_NETWORK:-job-pricing-network}
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    command: celery -A src.job_pricing.worker worker --loglevel=info
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.job_pricing.worker inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # Celery Beat (Scheduler)
+  # ----------------------------------------------------------------------------
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-job-pricing}-celery-beat
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      SCRAPING_SCHEDULE_WEEKLY: ${SCRAPING_SCHEDULE_WEEKLY}
+      SCRAPING_SCHEDULE_DAILY: ${SCRAPING_SCHEDULE_DAILY}
+      API_KEY_SALT: ${API_KEY_SALT}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    networks:
+      - ${DOCKER_NETWORK:-job-pricing-network}
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    command: celery -A src.job_pricing.worker beat --loglevel=info
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # Test Runner (Development/CI)
+  # ----------------------------------------------------------------------------
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: ${COMPOSE_PROJECT_NAME:-job-pricing}-test
+    environment:
+      # Test environment
+      ENVIRONMENT: development
+      DEBUG: "true"
+
+      # Use production database for integration tests (real data needed)
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      # Redis (shared with main)
+      REDIS_URL: ${REDIS_URL}
+
+      # OpenAI (use same key for tests)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Security (use test values)
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      API_KEY_SALT: ${API_KEY_SALT}
+
+      # Celery
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+
+      # Test-specific settings
+      PYTHONPATH: /app
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - ${DOCKER_NETWORK:-job-pricing-network}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - test
+    command: >
+      sh -c "
+        echo 'Setting up test database...' &&
+        createdb -h postgres -U ${POSTGRES_USER} ${POSTGRES_DB}_test || true &&
+        python -m alembic upgrade head &&
+        echo 'Running tests...' &&
+        pytest tests/ -v --tb=short --cov=src.job_pricing --cov-report=term-missing
+      "
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  job-pricing-network:
+    name: ${DOCKER_NETWORK:-job-pricing-network}
+    driver: bridge
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-job-pricing}-postgres-data
+  redis_data:
+    name: ${COMPOSE_PROJECT_NAME:-job-pricing}-redis-data
+
+# ==============================================================================
+# USAGE INSTRUCTIONS
+# ==============================================================================
+#
+# Local Development:
+#   docker-compose up -d
+#
+# Production Deployment:
+#   1. Ensure .env has ENVIRONMENT=production
+#   2. docker-compose up -d
+#
+# Run Tests:
+#   docker-compose --profile test up test
+#   docker-compose --profile test run --rm test pytest tests/unit/ -v
+#
+# View Logs:
+#   docker-compose logs -f [service_name]
+#
+# Stop All Services:
+#   docker-compose down
+#
+# Rebuild Services:
+#   docker-compose up -d --build
+#
+# Rebuild Test Environment:
+#   docker-compose --profile test build test
+#
+# ==============================================================================

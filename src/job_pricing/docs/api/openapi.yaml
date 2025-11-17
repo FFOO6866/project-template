@@ -1,0 +1,1134 @@
+openapi: 3.1.0
+info:
+  title: Dynamic Job Pricing Engine API
+  version: 1.0.0
+  description: |
+    Production-ready API for AI-powered compensation intelligence platform.
+
+    ## Features
+    - Job pricing with confidence scoring
+    - Mercer job library integration
+    - SSG skills extraction
+    - Market data aggregation
+    - Historical trends analysis
+
+    ## Authentication
+    All endpoints require JWT Bearer token authentication except /auth endpoints.
+
+    ## Rate Limiting
+    - Free Tier: 100 requests/hour
+    - Standard Tier: 1000 requests/hour
+    - Enterprise Tier: Unlimited
+
+  contact:
+    name: API Support
+    email: api-support@company.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.jobpricing.company.com/v1
+    description: Production server
+  - url: https://staging-api.jobpricing.company.com/v1
+    description: Staging server
+  - url: http://localhost:8000/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Job Pricing
+    description: Job pricing request and results management
+  - name: Mercer Integration
+    description: Mercer job library search and mapping
+  - name: Skills
+    description: Skills extraction and SSG framework integration
+  - name: Market Data
+    description: Market trends and benchmarking data
+  - name: Users
+    description: User management
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== Authentication ====================
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and return JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@company.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePassword123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Generate new access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  # ==================== Job Pricing ====================
+  /job-pricing/request:
+    post:
+      tags:
+        - Job Pricing
+      summary: Submit job pricing request
+      description: Create a new job pricing request and trigger pricing algorithm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobPricingRequest'
+      responses:
+        '201':
+          description: Job pricing request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPricingRequestResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /job-pricing/{request_id}:
+    get:
+      tags:
+        - Job Pricing
+      summary: Get pricing result
+      description: Retrieve pricing result for a specific request
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pricing result retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingResult'
+        '404':
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /job-pricing/history:
+    get:
+      tags:
+        - Job Pricing
+      summary: Get user's pricing request history
+      description: List all pricing requests created by the authenticated user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed]
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingHistoryResponse'
+
+  /job-pricing/{request_id}/export:
+    get:
+      tags:
+        - Job Pricing
+      summary: Export pricing result
+      description: Export pricing result as PDF or Excel
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [pdf, excel]
+      responses:
+        '200':
+          description: Export successful
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # ==================== Mercer Integration ====================
+  /mercer/search:
+    get:
+      tags:
+        - Mercer Integration
+      summary: Search Mercer job library
+      description: Search for jobs in Mercer library by keyword
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword
+        - name: family
+          in: query
+          schema:
+            type: string
+          description: Filter by job family
+        - name: career_level
+          in: query
+          schema:
+            type: string
+          description: Filter by career level (e.g., M4, M5)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MercerSearchResponse'
+
+  /mercer/jobs/{job_code}:
+    get:
+      tags:
+        - Mercer Integration
+      summary: Get Mercer job details
+      description: Retrieve detailed information for a specific Mercer job
+      parameters:
+        - name: job_code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: HRM.04.005.M50
+      responses:
+        '200':
+          description: Job details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MercerJobDetail'
+
+  /mercer/map:
+    post:
+      tags:
+        - Mercer Integration
+      summary: Map job to Mercer library
+      description: AI-powered mapping of user job to Mercer library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - job_title
+                - job_description
+              properties:
+                job_title:
+                  type: string
+                job_description:
+                  type: string
+                job_family:
+                  type: string
+                internal_grade:
+                  type: string
+                skills:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Mapping completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MercerMappingResult'
+
+  # ==================== Skills ====================
+  /skills/extract:
+    post:
+      tags:
+        - Skills
+      summary: Extract skills from job description
+      description: Use AI to extract skills from job description text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - job_description
+              properties:
+                job_description:
+                  type: string
+                job_family:
+                  type: string
+                  description: Optional job family for better context
+      responses:
+        '200':
+          description: Skills extracted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsExtractionResult'
+
+  /skills/search:
+    get:
+      tags:
+        - Skills
+      summary: Search SSG skills framework
+      description: Search for skills in Singapore Skills Framework
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: proficiency_level
+          in: query
+          schema:
+            type: string
+            enum: [Basic, Intermediate, Advanced]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsSearchResponse'
+
+  # ==================== Market Data ====================
+  /market-data/trends:
+    get:
+      tags:
+        - Market Data
+      summary: Get market salary trends
+      description: Retrieve salary trends over time for specific job roles
+      parameters:
+        - name: job_family
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+            default: Singapore
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [6months, 1year, 2years]
+            default: 1year
+      responses:
+        '200':
+          description: Trends data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketTrendsResponse'
+
+  /market-data/benchmarks:
+    get:
+      tags:
+        - Market Data
+      summary: Get salary benchmarks
+      description: Retrieve salary benchmarks for specific criteria
+      parameters:
+        - name: job_title
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: grade
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Benchmarks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarksResponse'
+
+  # ==================== Users ====================
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieve authenticated user's profile information
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Update authenticated user's profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                department:
+                  type: string
+                notification_preferences:
+                  type: object
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /users/me/api-keys:
+    get:
+      tags:
+        - Users
+      summary: List API keys
+      description: List all API keys for the authenticated user
+      responses:
+        '200':
+          description: API keys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+
+    post:
+      tags:
+        - Users
+      summary: Create API key
+      description: Generate a new API key for programmatic access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Descriptive name for the API key
+                expires_in_days:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+                  default: 90
+      responses:
+        '201':
+          description: API key created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreated'
+
+# ==================== Components ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Authentication Schemas
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+              example: Bearer
+            expires_in:
+              type: integer
+              example: 3600
+            user:
+              $ref: '#/components/schemas/UserProfile'
+
+    TokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            token_type:
+              type: string
+              example: Bearer
+            expires_in:
+              type: integer
+              example: 3600
+
+    # Job Pricing Schemas
+    JobPricingRequest:
+      type: object
+      required:
+        - job_title
+        - job_description
+        - location
+        - employment_type
+        - internal_grade
+        - job_family
+      properties:
+        job_title:
+          type: string
+          minLength: 5
+          maxLength: 200
+          example: Senior Software Engineer
+        job_description:
+          type: string
+          minLength: 50
+          maxLength: 5000
+          example: |
+            We are seeking a Senior Software Engineer to join our team...
+        location:
+          type: string
+          example: Central Business District
+        portfolio:
+          type: string
+          example: Technology
+        department:
+          type: string
+          example: Engineering
+        employment_type:
+          type: string
+          enum: [Full-time, Contract, Part-time]
+          example: Full-time
+        internal_grade:
+          type: string
+          pattern: '^[0-9]{1,2}$'
+          example: "9"
+        job_family:
+          type: string
+          example: Engineering
+        skills:
+          type: array
+          items:
+            type: string
+          example: [Python, AWS, Docker, Kubernetes]
+        alternative_titles:
+          type: array
+          items:
+            type: string
+          example: [Software Developer, Backend Engineer]
+
+    JobPricingRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            request_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [pending, processing, completed, failed]
+            created_at:
+              type: string
+              format: date-time
+            estimated_completion_time:
+              type: integer
+              description: Estimated seconds until completion
+
+    PricingResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            request_id:
+              type: string
+              format: uuid
+            job_summary:
+              type: object
+              properties:
+                job_title:
+                  type: string
+                location:
+                  type: string
+                internal_grade:
+                  type: string
+                employment_type:
+                  type: string
+            mercer_mapping:
+              type: object
+              properties:
+                job_code:
+                  type: string
+                job_title:
+                  type: string
+                position_class:
+                  type: integer
+                confidence:
+                  type: number
+                  format: float
+            salary_recommendation:
+              type: object
+              properties:
+                currency:
+                  type: string
+                  example: SGD
+                period:
+                  type: string
+                  example: annual
+                recommended_range:
+                  type: object
+                  properties:
+                    min:
+                      type: number
+                      format: float
+                      example: 72000
+                    max:
+                      type: number
+                      format: float
+                      example: 95000
+                    target:
+                      type: number
+                      format: float
+                      example: 82000
+                full_distribution:
+                  type: object
+                  properties:
+                    p10:
+                      type: number
+                      format: float
+                    p25:
+                      type: number
+                      format: float
+                    p50:
+                      type: number
+                      format: float
+                    p75:
+                      type: number
+                      format: float
+                    p90:
+                      type: number
+                      format: float
+            confidence_metrics:
+              type: object
+              properties:
+                overall_score:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                confidence_level:
+                  type: string
+                  enum: [High, Medium, Low]
+                recommendation:
+                  type: string
+            data_sources:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  weight_applied:
+                    type: number
+                    format: float
+                  p50:
+                    type: number
+                    format: float
+                  sample_size:
+                    type: integer
+                  data_date:
+                    type: string
+                    format: date
+            explanation:
+              type: object
+              properties:
+                summary:
+                  type: string
+                key_factors:
+                  type: array
+                  items:
+                    type: string
+                considerations:
+                  type: array
+                  items:
+                    type: string
+            alternative_scenarios:
+              type: array
+              items:
+                type: object
+                properties:
+                  scenario:
+                    type: string
+                  range:
+                    type: object
+                    properties:
+                      min:
+                        type: number
+                      max:
+                        type: number
+                  use_case:
+                    type: string
+            created_at:
+              type: string
+              format: date-time
+
+    PricingHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  request_id:
+                    type: string
+                    format: uuid
+                  job_title:
+                    type: string
+                  status:
+                    type: string
+                  confidence_level:
+                    type: string
+                  recommended_salary_range:
+                    type: string
+                    example: "SGD 72,000 - 95,000"
+                  created_at:
+                    type: string
+                    format: date-time
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    # Mercer Schemas
+    MercerSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  job_code:
+                    type: string
+                  job_title:
+                    type: string
+                  family:
+                    type: string
+                  career_level:
+                    type: string
+                  position_class:
+                    type: integer
+            total:
+              type: integer
+
+    MercerJobDetail:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            job_code:
+              type: string
+            job_title:
+              type: string
+            family:
+              type: string
+            subfamily:
+              type: string
+            career_level:
+              type: string
+            position_class:
+              type: integer
+            job_description:
+              type: string
+            typical_titles:
+              type: array
+              items:
+                type: string
+            ipe_factors:
+              type: object
+              properties:
+                impact:
+                  type: object
+                  properties:
+                    min:
+                      type: integer
+                    max:
+                      type: integer
+                communication:
+                  type: object
+                  properties:
+                    min:
+                      type: integer
+                    max:
+                      type: integer
+
+    MercerMappingResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            selected_job:
+              type: object
+              properties:
+                job_code:
+                  type: string
+                job_title:
+                  type: string
+                confidence:
+                  type: number
+                  format: float
+            explanation:
+              type: string
+            alternative_matches:
+              type: array
+              items:
+                type: object
+                properties:
+                  job_code:
+                    type: string
+                  job_title:
+                    type: string
+                  similarity_score:
+                    type: number
+
+    # Skills Schemas
+    SkillsExtractionResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            skills:
+              type: array
+              items:
+                type: object
+                properties:
+                  skill_name:
+                    type: string
+                  tsc_code:
+                    type: string
+                  proficiency_level:
+                    type: string
+                  confidence:
+                    type: number
+                    format: float
+
+    SkillsSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  tsc_code:
+                    type: string
+                  tsc_title:
+                    type: string
+                  skill_category:
+                    type: string
+                  proficiency_level:
+                    type: string
+
+    # Market Data Schemas
+    MarketTrendsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            job_family:
+              type: string
+            location:
+              type: string
+            trends:
+              type: array
+              items:
+                type: object
+                properties:
+                  period:
+                    type: string
+                    format: date
+                  p50_salary:
+                    type: number
+                  growth_rate:
+                    type: number
+
+    BenchmarksResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            job_title:
+              type: string
+            percentiles:
+              type: object
+              properties:
+                p10:
+                  type: number
+                p25:
+                  type: number
+                p50:
+                  type: number
+                p75:
+                  type: number
+                p90:
+                  type: number
+
+    # User Schemas
+    UserProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        department:
+          type: string
+        role:
+          type: string
+          enum: [Viewer, Analyst, Manager, Admin]
+        created_at:
+          type: string
+          format: date-time
+
+    ApiKey:
+      type: object
+      properties:
+        key_id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+
+    ApiKeyCreated:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            key_id:
+              type: string
+            api_key:
+              type: string
+              description: This is the only time the API key will be displayed
+            name:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
+
+    # Common Schemas
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: INVALID_INPUT
+            message:
+              type: string
+              example: Validation error
+            details:
+              type: object
+        metadata:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            request_id:
+              type: string
+              format: uuid

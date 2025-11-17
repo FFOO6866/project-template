@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 222.2 47.4% 11.2%;
+    --chart-2: 215 25% 27%;
+    --chart-3: 217 33% 17%;
+    --chart-4: 219 14% 51%;
+    --chart-5: 218 11% 65%;
+    --chart-6: 220 14% 96%;
+    --chart-7: 220 13% 91%;
+    --chart-8: 216 12% 84%;
+    --chart-9: 220 9% 46%;
+    --chart-10: 215 25% 27%;
+    --chart-11: 217 33% 17%;
+    --chart-12: 219 14% 51%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom styles for Talent Verse */
+.talent-verse-gradient {
+  background: linear-gradient(to right, #4f46e5, #0891b2, #16a34a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card-hover-effect {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Sidebar animation */
+.sidebar-item {
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Performance chart styles */
+.recharts-default-tooltip {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+}
+
+.recharts-tooltip-label {
+  font-weight: 500 !important;
+  margin-bottom: 4px !important;
+}
+
+.recharts-tooltip-item {
+  padding: 2px 0 !important;
+}
+
+/* Metric card animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+  }
+}
+
+.metric-card-highlight {
+  animation: pulse 2s infinite;
+}

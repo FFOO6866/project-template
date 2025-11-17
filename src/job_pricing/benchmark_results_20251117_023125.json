@@ -1,0 +1,50 @@
+{
+  "single_request": {
+    "total_time": 1.398186206817627,
+    "confidence_score": 47.0,
+    "sources_used": 1.0,
+    "target_salary": 6250.0
+  },
+  "embedding_generation": {
+    "embedding_generation_time": 0.5767574310302734,
+    "embedding_dimensions": 1536.0
+  },
+  "vector_search": {
+    "vector_search_time": 0.5251429080963135,
+    "candidates_found": 0.0
+  },
+  "llm_matching": {
+    "llm_matching_time": 0.0,
+    "match_found": 0.0
+  },
+  "database_queries": {
+    "query_mercer_jobs_100": 0.05006074905395508,
+    "mercer_jobs_found": 100.0,
+    "query_scraped_jobs_100": 0.005988597869873047,
+    "scraped_jobs_found": 100.0,
+    "query_market_data_sg": 0.005541324615478516,
+    "market_data_records": 37.0,
+    "query_pricing_requests_100": 0.006372690200805664,
+    "pricing_requests_found": 18.0
+  },
+  "concurrent_5": {
+    "total_time": 3.481938362121582,
+    "requests_completed": 5.0,
+    "requests_per_second": 1.4359817664760288,
+    "avg_response_time": 1.213071584701538,
+    "min_response_time": 0.38784050941467285,
+    "max_response_time": 3.4716951847076416,
+    "p50_response_time": 0.4490935802459717,
+    "p95_response_time": 3.4716951847076416
+  },
+  "concurrent_10": {
+    "total_time": 3.8609206676483154,
+    "requests_completed": 10.0,
+    "requests_per_second": 2.5900558081373357,
+    "avg_response_time": 1.057920503616333,
+    "min_response_time": 0.3919832706451416,
+    "max_response_time": 3.448997735977173,
+    "p50_response_time": 0.45413875579833984,
+    "p95_response_time": 3.448997735977173
+  }
+}
