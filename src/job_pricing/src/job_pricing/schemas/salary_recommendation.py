@@ -40,9 +40,9 @@ class SalaryRecommendationRequest(BaseModel):
 
     job_family: Optional[str] = Field(
         default=None,
-        max_length=10,
-        description="Mercer job family code (e.g., 'HRM', 'ICT') for filtering",
-        examples=["HRM", "ICT", "FIN", "MKT"]
+        max_length=100,
+        description="Job family name or Mercer code (e.g., 'Human Resources', 'HRM') for filtering",
+        examples=["HRM", "Human Resources", "Total Rewards", "Finance"]
     )
 
     career_level: Optional[str] = Field(
@@ -77,8 +77,8 @@ class JobMatchingRequest(BaseModel):
 
     job_title: str = Field(..., min_length=3, max_length=200)
     job_description: Optional[str] = Field(default="", max_length=5000)
-    job_family: Optional[str] = Field(default=None, max_length=10)
-    career_level: Optional[str] = Field(default=None, max_length=10)
+    job_family: Optional[str] = Field(default=None, max_length=100)
+    career_level: Optional[str] = Field(default=None, max_length=20)
     top_k: int = Field(default=5, ge=1, le=10, description="Number of top matches to return")
 
     class Config:
