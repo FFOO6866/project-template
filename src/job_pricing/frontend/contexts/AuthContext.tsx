@@ -61,8 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (username: string, password: string) => {
+    // PRODUCTION: API base URL must be configured - no localhost fallback
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+    if (!apiBaseUrl) {
+      throw new Error('NEXT_PUBLIC_API_BASE_URL environment variable is not configured')
+    }
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/auth/login`, {
+      const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username, password }),

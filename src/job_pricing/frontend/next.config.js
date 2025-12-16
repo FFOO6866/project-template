@@ -1,4 +1,12 @@
 /** @type {import('next').NextConfig} */
+
+// Validate required environment variables
+if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_BASE_URL environment variable is required')
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -6,13 +14,13 @@ const nextConfig = {
   output: 'standalone',
 
   env: {
-    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+    NEXT_PUBLIC_API_BASE_URL: API_BASE_URL,
   },
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/:path*`,
+        destination: `${API_BASE_URL}/api/:path*`,
       },
     ]
   },

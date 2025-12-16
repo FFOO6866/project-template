@@ -23,8 +23,8 @@ from job_pricing.core.database import get_session
 from job_pricing.core.config import get_settings
 from job_pricing.core.constants import DataSource, APIConfig, ErrorMessages
 from job_pricing.repositories.scraping_repository import ScrapingRepository
-from job_pricing.models.auth import User, Permission
-from job_pricing.api.dependencies.auth import get_current_active_user, PermissionChecker
+from job_pricing.models.auth import User
+from job_pricing.api.dependencies.auth import get_current_active_user
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -289,7 +289,6 @@ async def get_mycareersfuture_jobs(
         le=APIConfig.MAX_PAGE_SIZE
     ),
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_EXTERNAL_DATA])),
     repository: ScrapingRepository = Depends(get_scraping_repository),
 ):
     """
@@ -430,7 +429,6 @@ async def get_glassdoor_data(
         le=APIConfig.MAX_PAGE_SIZE
     ),
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_EXTERNAL_DATA])),
     repository: ScrapingRepository = Depends(get_scraping_repository),
 ):
     """

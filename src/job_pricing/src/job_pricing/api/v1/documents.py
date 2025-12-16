@@ -5,6 +5,7 @@ Provides endpoints for uploading job description documents and extracting
 structured job information using OpenAI.
 """
 
+import json
 import logging
 import io
 from typing import Optional, List
@@ -179,7 +180,6 @@ Remember to return ONLY the JSON object, no other text."""
         ai_response = response.choices[0].message.content
 
         # Parse JSON response
-        import json
         extracted_data = json.loads(ai_response)
 
         return ExtractedJobDetails(
@@ -236,7 +236,7 @@ async def extract_document(
     Returns:
         ExtractedJobDetails with structured job information
     """
-    logger.info(f"Document extraction requested by user {current_user.email}")
+    logger.info(f"Document extraction requested by user {current_user.email} for file: {file.filename}")
 
     # Validate file type
     allowed_types = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]

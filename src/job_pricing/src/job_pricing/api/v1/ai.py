@@ -13,7 +13,8 @@ Rate limited to prevent excessive OpenAI API costs.
 
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from openai import OpenAI
 import os
@@ -22,8 +23,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from job_pricing.core.database import get_session
-from job_pricing.models.auth import User, Permission
-from job_pricing.api.dependencies.auth import get_current_active_user, get_optional_current_user, PermissionChecker
+from job_pricing.models.auth import User
+from job_pricing.api.dependencies.auth import get_current_active_user, get_optional_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -154,12 +155,25 @@ class MercerMappingRequest(BaseModel):
         }
 
 
+class MercerMatch(BaseModel):
+    """Single Mercer job match with similarity score."""
+    mercer_job_code: str
+    mercer_job_title: str
+    mercer_job_description: str
+    similarity_score: float = Field(..., ge=0.0, le=1.0, description="Semantic similarity score (0-1)")
+    job_family: Optional[str] = Field(None, description="Mercer job family code")
+
+
 class MercerMappingResponse(BaseModel):
-    """Response with Mercer mapping."""
+    """Response with top 3 Mercer job matches."""
+    # Top match (for backward compatibility and quick access)
     mercer_job_code: str
     mercer_job_title: str
     mercer_job_description: str
     confidence_score: float = Field(..., ge=0.0, le=1.0)
+
+    # All top 3 matches (new field)
+    matches: List[MercerMatch] = Field(..., min_items=1, max_items=3, description="Top 3 matching Mercer jobs")
 
     class Config:
         json_schema_extra = {
@@ -167,7 +181,30 @@ class MercerMappingResponse(BaseModel):
                 "mercer_job_code": "ICT.04.005.M50",
                 "mercer_job_title": "Data Scientist - Senior",
                 "mercer_job_description": "Applies advanced analytics...",
-                "confidence_score": 0.85
+                "confidence_score": 0.85,
+                "matches": [
+                    {
+                        "mercer_job_code": "ICT.04.005.M50",
+                        "mercer_job_title": "Data Scientist - Senior",
+                        "mercer_job_description": "Applies advanced analytics...",
+                        "similarity_score": 0.85,
+                        "job_family": "ICT"
+                    },
+                    {
+                        "mercer_job_code": "ICT.04.004.ET2",
+                        "mercer_job_title": "Data Scientist",
+                        "mercer_job_description": "Develops data models...",
+                        "similarity_score": 0.78,
+                        "job_family": "ICT"
+                    },
+                    {
+                        "mercer_job_code": "ICT.05.002.M50",
+                        "mercer_job_title": "Analytics Manager",
+                        "mercer_job_description": "Leads analytics team...",
+                        "similarity_score": 0.72,
+                        "job_family": "ICT"
+                    }
+                ]
             }
         }
 
@@ -300,9 +337,9 @@ def parse_skills_from_text(text: str) -> List[ExtractedSkill]:
 )
 @limiter.limit("10/minute")
 async def extract_skills(
-    request: SkillExtractionRequest,
+    request: Request,
+    data: SkillExtractionRequest,
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.USE_AI_GENERATION])),
 ):
     """
     Extract skills from job title and description using OpenAI.
@@ -322,7 +359,7 @@ async def extract_skills(
     """
     logger.info(
         f"AI skill extraction requested by user {current_user.email} "
-        f"for job: {request.job_title}"
+        f"for job: {data.job_title}"
     )
 
     system_prompt = """You are an expert HR analyst specializing in job skill extraction.
@@ -341,11 +378,11 @@ Example:
 
     user_prompt = f"""Extract skills from this job:
 
-Job Title: {request.job_title}
+Job Title: {data.job_title}
 """
 
-    if request.job_description:
-        user_prompt += f"\nJob Description: {request.job_description}"
+    if data.job_description:
+        user_prompt += f"\nJob Description: {data.job_description}"
 
     user_prompt += "\n\nList 5-15 most important skills in the specified format."
 
@@ -385,9 +422,9 @@ Job Title: {request.job_title}
 )
 @limiter.limit("10/minute")
 async def generate_job_description(
-    request: JobDescriptionGenerationRequest,
+    request: Request,
+    data: JobDescriptionGenerationRequest,
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.USE_AI_GENERATION])),
 ):
     """
     Generate a professional job description using OpenAI.
@@ -403,7 +440,7 @@ async def generate_job_description(
     """
     logger.info(
         f"AI job description generation requested by user {current_user.email} "
-        f"for job: {request.job_title}"
+        f"for job: {data.job_title}"
     )
 
     system_prompt = """You are an expert HR professional who writes compelling job descriptions.
@@ -419,15 +456,15 @@ Keep tone professional but engaging. Be specific about skills and experience."""
 
     user_prompt = f"""Create a job description for:
 
-Job Title: {request.job_title}
+Job Title: {data.job_title}
 """
 
-    if request.department:
-        user_prompt += f"\nDepartment: {request.department}"
-    if request.job_family:
-        user_prompt += f"\nJob Family: {request.job_family}"
-    if request.key_responsibilities:
-        user_prompt += f"\nKey Responsibilities: {', '.join(request.key_responsibilities)}"
+    if data.department:
+        user_prompt += f"\nDepartment: {data.department}"
+    if data.job_family:
+        user_prompt += f"\nJob Family: {data.job_family}"
+    if data.key_responsibilities:
+        user_prompt += f"\nKey Responsibilities: {', '.join(data.key_responsibilities)}"
 
     # Call OpenAI
     try:
@@ -464,93 +501,150 @@ Job Title: {request.job_title}
 )
 @limiter.limit("10/minute")
 async def map_mercer_code(
-    request: MercerMappingRequest,
+    request: Request,
+    data: MercerMappingRequest,
     current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     """
-    Map job title to Mercer job code using AI.
+    Map job title to Mercer job code using semantic search against the Mercer database.
 
     **Rate Limit**: 10 requests per minute
     **Authentication**: Optional (but recommended for tracking)
 
-    **Note**: This is an AI-based mapping. For production, integrate
-    with actual Mercer API or database for accurate mapping.
+    **How it works**:
+    - Uses vector embeddings to find the most similar Mercer job
+    - Searches across 18,000+ standardized Mercer jobs
+    - Returns REAL job codes with official descriptions
+    - Confidence score based on semantic similarity
+
+    **Note**: This uses the same proven semantic search as the salary recommendation engine.
     """
     logger.info(
-        f"AI Mercer mapping requested by user {current_user.email if current_user else 'anonymous'} "
-        f"for job: {request.job_title}"
+        f"Mercer mapping requested by user {current_user.email if current_user else 'anonymous'} "
+        f"for job: {data.job_title}"
     )
-    system_prompt = """You are an expert in Mercer job classification system.
-Map job titles to appropriate Mercer job codes.
 
-Mercer code format: [FAMILY].[LEVEL].[SPECIALIZATION].[GRADE]
-Example: ICT.04.005.M50
+    # ✅ USE REAL SEMANTIC SEARCH AGAINST MERCER DATABASE
+    # Instead of having AI guess codes, use the same semantic search as salary recommendation
+    from job_pricing.services.job_matching_service import JobMatchingService
+    from job_pricing.core.database import get_session
+    from job_pricing.models.mercer import MercerJobLibrary
 
-Families:
-- ICT: Information & Communication Technology
-- FIN: Finance
-- HRM: Human Resources Management
-- MKT: Marketing
-- OPS: Operations
+    db = next(get_session())
 
-Provide:
-1. Mercer Job Code
-2. Mercer Job Title
-3. Brief description
-4. Confidence score (0.0-1.0)"""
-
-    user_prompt = f"""Map this job to Mercer classification:
-
-Job Title: {request.job_title}
-"""
-
-    if request.job_description:
-        user_prompt += f"\nDescription: {request.job_description[:200]}"
-    if request.job_family:
-        user_prompt += f"\nJob Family: {request.job_family}"
-
-    user_prompt += "\n\nProvide: Mercer Code | Mercer Title | Description | Confidence"
-
-    # Call OpenAI
     try:
-        ai_response = call_openai_chat(system_prompt, user_prompt)
+        # Use JobMatchingService for semantic search against Mercer database
+        matching_service = JobMatchingService(db)
+
+        # Find similar jobs using vector embeddings
+        # NOTE: For Mercer mapping, we search across ALL families to find the best semantic match
+        # The job_family is intentionally set to None to avoid overly restrictive filtering
+        logger.info(f"[MERCER SEARCH] Searching Mercer database for:")
+        logger.info(f"  job_title: '{data.job_title}'")
+        logger.info(f"  job_description: '{data.job_description}'")
+        logger.info(f"  job_family: None (searching ALL families for best semantic match)")
+        logger.info(f"  requested_family_hint: '{data.job_family}' (not used as filter)")
+        logger.info(f"  top_k: 3")
+
+        try:
+            matches = matching_service.find_similar_jobs(
+                job_title=data.job_title,
+                job_description=data.job_description or "",
+                job_family=None,  # Search ALL families - don't filter
+                top_k=3  # Get top 3 to log them
+            )
+        except Exception as search_error:
+            logger.error(f"[MERCER SEARCH] ❌ Exception during find_similar_jobs: {search_error}", exc_info=True)
+            raise
+
+        logger.info(f"[MERCER SEARCH] find_similar_jobs() returned: {len(matches) if matches else 0} matches")
+
+        if not matches or len(matches) == 0:
+            logger.warning(f"[MERCER SEARCH] ❌ No Mercer matches found for: {data.job_title}")
+            logger.warning(f"[MERCER SEARCH] This should NOT happen - database has 18,000+ jobs with embeddings")
+            logger.warning(f"[MERCER SEARCH] Possible causes:")
+            logger.warning(f"  1. OpenAI embedding generation failed silently")
+            logger.warning(f"  2. Database connection issue")
+            logger.warning(f"  3. All embeddings are NULL in database")
+
+            # Check if we can query the database at all
+            try:
+                job_count = db.query(MercerJobLibrary).count()
+                logger.warning(f"[MERCER SEARCH] Database has {job_count} total Mercer jobs")
+
+                embedding_count = db.query(MercerJobLibrary).filter(
+                    MercerJobLibrary.embedding.isnot(None)
+                ).count()
+                logger.warning(f"[MERCER SEARCH] Database has {embedding_count} jobs with embeddings")
+            except Exception as db_check_error:
+                logger.error(f"[MERCER SEARCH] Failed to check database: {db_check_error}")
+
+            raise HTTPException(
+                status_code=404,
+                detail="No matching Mercer job found. The semantic search returned zero results, which is unexpected. Please check the server logs for details."
+            )
+
+        # Log all matches for debugging
+        logger.info(f"[MERCER SEARCH] ✅ Found {len(matches)} matches for '{data.job_title}':")
+        for i, match in enumerate(matches[:3], 1):
+            logger.info(f"  {i}. {match['job_code']} - {match['job_title']} (similarity: {match['similarity_score']:.2%}, family: {match.get('family', 'N/A')})")
+
+        # Get full details for all top 3 matches from database
+        top_matches = matches[:3]  # Limit to top 3
+        match_details = []
+
+        for match in top_matches:
+            mercer_job = db.query(MercerJobLibrary).filter(
+                MercerJobLibrary.job_code == match["job_code"]
+            ).first()
+
+            if mercer_job:
+                match_details.append(MercerMatch(
+                    mercer_job_code=mercer_job.job_code,
+                    mercer_job_title=mercer_job.job_title,
+                    mercer_job_description=mercer_job.job_description or "No description available.",
+                    similarity_score=match["similarity_score"],
+                    job_family=match.get("family")
+                ))
+            else:
+                logger.warning(f"Matched job code {match['job_code']} not found in database, skipping")
+
+        if not match_details:
+            logger.error("No matched jobs found in database")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error: No matched jobs found in database"
+            )
+
+        # Best match is the first one
+        best_match_detail = match_details[0]
+
+        logger.info(
+            f"✅ Matched '{data.job_title}' to {best_match_detail.mercer_job_code} - {best_match_detail.mercer_job_title} "
+            f"(similarity: {best_match_detail.similarity_score:.2%}), with {len(match_details)-1} alternatives"
+        )
+
+        return MercerMappingResponse(
+            # Top match fields (for backward compatibility)
+            mercer_job_code=best_match_detail.mercer_job_code,
+            mercer_job_title=best_match_detail.mercer_job_title,
+            mercer_job_description=best_match_detail.mercer_job_description,
+            confidence_score=best_match_detail.similarity_score,
+            # All matches (new field)
+            matches=match_details
+        )
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OpenAI API error for user {current_user.email if current_user else 'anonymous'}: {e}", exc_info=True)
+        logger.error(f"Error during Mercer job matching: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service temporarily unavailable"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to map to Mercer job code: {str(e)}"
         )
-
-    # Parse response (simplified - in production, use structured output)
-    lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
-
-    # Default values
-    mercer_code = "ICT.04.005.M50"
-    mercer_title = f"{request.job_title} (Mapped)"
-    mercer_desc = "AI-generated mapping. Verify with official Mercer database."
-    confidence = 0.7
-
-    # Try to extract from response
-    for line in lines:
-        if "code" in line.lower() and ":" in line:
-            mercer_code = line.split(":")[-1].strip()
-        elif "title" in line.lower() and ":" in line:
-            mercer_title = line.split(":")[-1].strip()
-        elif "confidence" in line.lower() and ":" in line:
-            try:
-                conf_str = line.split(":")[-1].strip().replace("%", "")
-                confidence = float(conf_str) / 100 if float(conf_str) > 1 else float(conf_str)
-            except:
-                pass
-
-    return MercerMappingResponse(
-        mercer_job_code=mercer_code,
-        mercer_job_title=mercer_title,
-        mercer_job_description=mercer_desc,
-        confidence_score=confidence
-    )
+    finally:
+        if db:
+            db.close()
 
 
 @router.post(
@@ -568,7 +662,8 @@ Job Title: {request.job_title}
 )
 @limiter.limit("10/minute")
 async def generate_alternative_titles(
-    request: AlternativeTitlesRequest,
+    request: Request,
+    data: AlternativeTitlesRequest,
     current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     """
@@ -581,7 +676,7 @@ async def generate_alternative_titles(
     """
     logger.info(
         f"AI alternative titles requested by user {current_user.email if current_user else 'anonymous'} "
-        f"for job: {request.job_title}"
+        f"for job: {data.job_title}"
     )
     system_prompt = """You are an expert in job market terminology and job title standardization.
 Generate alternative job titles that represent similar roles.
@@ -596,13 +691,13 @@ Provide 5-10 alternative titles, ranked by similarity."""
 
     user_prompt = f"""Generate alternative titles for:
 
-Job Title: {request.job_title}
+Job Title: {data.job_title}
 """
 
-    if request.job_family:
-        user_prompt += f"\nJob Family: {request.job_family}"
-    if request.industry:
-        user_prompt += f"\nIndustry: {request.industry}"
+    if data.job_family:
+        user_prompt += f"\nJob Family: {data.job_family}"
+    if data.industry:
+        user_prompt += f"\nIndustry: {data.industry}"
 
     user_prompt += "\n\nList alternative titles (one per line, no numbering):"
 

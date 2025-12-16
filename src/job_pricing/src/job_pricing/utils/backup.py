@@ -12,7 +12,7 @@ import logging
 import os
 import gzip
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 import subprocess
@@ -71,7 +71,7 @@ class BackupVerifier:
 
         results = {
             "success": False,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "backup_dir": str(self.backup_dir),
             "backups_found": 0,
             "backups_valid": 0,

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # --------------------------------------------------------------------------
     API_HOST: str = Field(default="0.0.0.0")
     API_PORT: int = Field(default=8000)
-    API_BASE_URL: str = Field(default="http://localhost:8000")
+    API_BASE_URL: str = Field(..., description="API base URL - REQUIRED, no localhost fallback")
 
     # --------------------------------------------------------------------------
     # Database
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     # --------------------------------------------------------------------------
     # CORS
     # --------------------------------------------------------------------------
-    CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8000")
+    CORS_ORIGINS: str = Field(..., description="CORS allowed origins - REQUIRED, no localhost fallback")
     CORS_ALLOW_CREDENTIALS: bool = Field(default=True)
 
     @property

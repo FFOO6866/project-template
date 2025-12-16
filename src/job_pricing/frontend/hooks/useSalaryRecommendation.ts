@@ -8,6 +8,82 @@
 import { useState, useEffect, useCallback } from 'react'
 import { salaryRecommendationApi, type SalaryRecommendationResponse } from '@/lib/api'
 
+/**
+ * Job Family Mapping: Convert full names to Mercer short codes
+ *
+ * This mapping ensures compatibility between document extraction (which returns full names)
+ * and the salary recommendation API (which expects 3-letter codes, max 10 chars).
+ */
+const JOB_FAMILY_MAPPING: Record<string, string> = {
+  // Human Resources
+  'Human Resources Management': 'HRM',
+  'Human Resources': 'HRM',
+  'HR': 'HRM',
+  'Total Rewards': 'HRM',  // Total Rewards is part of HRM
+  'Compensation & Benefits': 'HRM',
+  'C&B': 'HRM',
+
+  // IT & Technology
+  'Information Technology': 'ICT',
+  'Information & Communications Technology': 'ICT',
+  'IT': 'ICT',
+  'Technology': 'ICT',
+
+  // Finance
+  'Finance': 'FIN',
+  'Accounting': 'FIN',
+  'Finance & Accounting': 'FIN',
+
+  // Marketing
+  'Marketing': 'MKT',
+  'Sales & Marketing': 'MKT',
+
+  // Operations
+  'Operations': 'OPS',
+  'Operations Management': 'OPS',
+
+  // Engineering
+  'Engineering': 'ENG',
+
+  // Legal
+  'Legal': 'LEG',
+
+  // Add more mappings as needed
+}
+
+/**
+ * Convert full job family name to short Mercer code (max 10 chars)
+ *
+ * @param jobFamily - Full job family name or short code
+ * @returns Short Mercer code (max 10 chars) or undefined if not mappable
+ *
+ * @example
+ * normalizeJobFamily('Human Resources Management') // 'HRM'
+ * normalizeJobFamily('IT') // 'ICT'
+ * normalizeJobFamily('HRM') // 'HRM' (already short)
+ * normalizeJobFamily('') // undefined
+ */
+export function normalizeJobFamily(jobFamily?: string): string | undefined {
+  if (!jobFamily || jobFamily.trim() === '') return undefined
+
+  const trimmed = jobFamily.trim()
+
+  // If already 10 chars or less, return as-is
+  if (trimmed.length <= 10) {
+    return trimmed
+  }
+
+  // Try to find mapping
+  const mapped = JOB_FAMILY_MAPPING[trimmed]
+  if (mapped) {
+    return mapped
+  }
+
+  // If no mapping found, log warning and return undefined (skip filtering)
+  console.warn(`[Job Family] No mapping found for "${trimmed}" - skipping job_family filter`)
+  return undefined
+}
+
 export interface UseSalaryRecommendationOptions {
   jobTitle: string
   jobDescription?: string
@@ -57,16 +133,32 @@ export function useSalaryRecommendation(
       return
     }
 
+    // Check if user is authenticated (has token)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('job_pricing_access_token') : null
+    if (!token) {
+      console.warn('[SalaryRecommendation] No authentication token found, skipping fetch')
+      setData(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
+      // Normalize job_family to short code (max 10 chars) before sending to API
+      const normalizedJobFamily = normalizeJobFamily(jobFamily)
+
+      // Normalize career_level (remove empty strings, convert to undefined)
+      const normalizedCareerLevel = careerLevel && careerLevel.trim() !== '' ? careerLevel : undefined
+
       const result = await salaryRecommendationApi.recommendSalary({
         job_title: jobTitle,
         job_description: jobDescription,
         location: location || 'Central Business District',
-        job_family: jobFamily,
-        career_level: careerLevel,
+        job_family: normalizedJobFamily,
+        career_level: normalizedCareerLevel,
       })
 
       setData(result)
@@ -112,6 +204,31 @@ export function transformToMercerBenchmarks(
     return []
   }
 
+  // Safely get sample size from confidence factors (preferred) or data sources (fallback)
+  const getSampleSize = () => {
+    // PREFERRED: Get from confidence.factors.sample_size (correct field name per TypeScript interface)
+    if (data.confidence?.factors) {
+      const factors = data.confidence.factors as any
+      if (factors.sample_size !== undefined && factors.sample_size !== null) {
+        return Math.round(factors.sample_size)
+      }
+    }
+
+    // FALLBACK: Try to get sample size from any available data source
+    if (data.data_sources) {
+      const sources = Object.values(data.data_sources)
+      if (sources.length > 0 && sources[0]?.total_sample_size) {
+        return sources[0].total_sample_size
+      }
+    }
+
+    // Log warning if sample size is unavailable - NO FALLBACK DATA
+    console.warn('[SalaryRecommendation] Sample size unavailable from API response:', data)
+    throw new Error('Sample size data unavailable from API response')
+  }
+
+  const sampleSize = getSampleSize()
+
   // Create benchmarks from matched jobs
   return data.matched_jobs.map((job, index) => ({
     category: index === 0 ? 'Best Match' : 'Similar Job',
@@ -119,6 +236,6 @@ export function transformToMercerBenchmarks(
     p25: data.percentiles.p25,
     p50: data.percentiles.p50,
     p75: data.percentiles.p75,
-    sampleSize: data.data_sources.mercer_market_data.total_sample_size,
+    sampleSize,
   }))
 }

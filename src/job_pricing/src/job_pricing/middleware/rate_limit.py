@@ -6,7 +6,7 @@ Implements rate limiting based on authenticated user ID rather than IP address.
 
 import logging
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -175,7 +175,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             Unix timestamp (1 hour from now)
         """
-        reset_time = datetime.utcnow() + timedelta(hours=1)
+        reset_time = datetime.now(timezone.utc) + timedelta(hours=1)
         return int(reset_time.timestamp())
 
     def _get_retry_after_seconds(self) -> int:
@@ -186,6 +186,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             Seconds until reset
         """
         # Calculate seconds until next hour
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
         return int((next_hour - now).total_seconds())

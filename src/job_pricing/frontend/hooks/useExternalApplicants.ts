@@ -79,6 +79,15 @@ export function useExternalApplicants(
       return
     }
 
+    // Check if user is authenticated (has token)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('job_pricing_access_token') : null
+    if (!token) {
+      console.warn('[useExternalApplicants] No authentication token found, skipping fetch')
+      setData([])
+      setLoading(false)
+      return
+    }
+
     // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()

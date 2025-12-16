@@ -57,17 +57,24 @@ def get_db_context():
         db.close()
 
 
-def get_session() -> Session:
+def get_session():
     """
-    Get a new database session.
+    Get a new database session with automatic cleanup.
 
-    Note: Caller is responsible for closing the session.
+    This is a FastAPI dependency that yields a session and ensures
+    it's properly closed after the request completes.
 
-    Usage:
-        session = get_session()
-        try:
+    Usage (FastAPI endpoint):
+        def my_endpoint(session: Session = Depends(get_session)):
             user = session.query(User).first()
-        finally:
-            session.close()
+            # Session automatically closed after endpoint returns
+
+    Usage (manual):
+        with next(get_session()) as session:
+            user = session.query(User).first()
     """
-    return SessionLocal()
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

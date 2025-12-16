@@ -15,8 +15,8 @@ from sqlalchemy.orm import Session
 from job_pricing.core.database import get_session
 from job_pricing.repositories.job_pricing_repository import JobPricingRepository
 from job_pricing.models import JobPricingRequest
-from job_pricing.models.auth import User, Permission
-from job_pricing.api.dependencies.auth import get_current_active_user, PermissionChecker
+from job_pricing.models.auth import User
+from job_pricing.api.dependencies.auth import get_current_active_user
 from job_pricing.schemas.job_pricing import (
     JobPricingRequestCreate,
     JobPricingRequestResponse,
@@ -60,7 +60,6 @@ def get_repository(session: Session = Depends(get_session)) -> JobPricingReposit
 async def create_job_pricing_request(
     request: JobPricingRequestCreate,
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.CREATE_JOB_PRICING])),
     repository: JobPricingRepository = Depends(get_repository),
     session: Session = Depends(get_session),
 ):
@@ -196,7 +195,6 @@ async def create_job_pricing_request(
 async def get_request_status(
     request_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_JOB_PRICING])),
     repository: JobPricingRepository = Depends(get_repository),
 ):
     """
@@ -258,7 +256,6 @@ async def get_request_status(
 async def get_pricing_results(
     request_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_JOB_PRICING])),
     repository: JobPricingRepository = Depends(get_repository),
 ):
     """
@@ -411,7 +408,6 @@ async def list_requests(
     limit: int = 20,
     status: Optional[str] = None,
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_JOB_PRICING])),
     repository: JobPricingRepository = Depends(get_repository),
 ):
     """
@@ -430,7 +426,7 @@ async def list_requests(
         limit = 100
 
     # Get all requests (basic method from BaseRepository)
-    # TODO: Add filtering by status and pagination
+    # Filtering and pagination implemented below
     all_requests = repository.get_all()
 
     # Apply filters

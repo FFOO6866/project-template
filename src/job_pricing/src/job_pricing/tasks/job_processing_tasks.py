@@ -48,7 +48,7 @@ def process_job_pricing_request(self, request_id: str):
     """
     logger.info(f"[CELERY] Starting job pricing request processing: {request_id}")
 
-    session = get_session()
+    session = next(get_session())
 
     try:
         # Convert string to UUID
@@ -144,7 +144,7 @@ def process_pending_requests():
 
     logger.info("[CELERY] Checking for pending requests")
 
-    session = get_session()
+    session = next(get_session())
 
     try:
         repository = JobPricingRepository(session)

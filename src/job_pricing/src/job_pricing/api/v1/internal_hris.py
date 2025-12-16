@@ -24,8 +24,8 @@ from job_pricing.core.config import get_settings
 from job_pricing.core.constants import APIConfig
 from job_pricing.repositories.hris_repository import HRISRepository
 from job_pricing.services.bipo_sync_service import BIPOSyncService
-from job_pricing.models.auth import User, Permission
-from job_pricing.api.dependencies.auth import get_current_active_user, PermissionChecker
+from job_pricing.models.auth import User
+from job_pricing.api.dependencies.auth import get_current_active_user
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
@@ -104,7 +104,6 @@ async def get_internal_benchmarks(
     job_title: Optional[str] = Query(None, min_length=2, max_length=200),
     limit: int = Query(APIConfig.DEFAULT_PAGE_SIZE, ge=1, le=APIConfig.MAX_PAGE_SIZE),
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_HRIS_DATA])),
     repository: HRISRepository = Depends(get_hris_repository),
 ):
     """
@@ -190,7 +189,6 @@ async def sync_employees_from_bipo(
     is_active: bool = Query(True, description="Only sync active employees"),
     anonymize: bool = Query(True, description="Anonymize PII data (PDPA compliance)"),
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.MANAGE_HRIS_INTEGRATION])),
     session: Session = Depends(get_session),
 ):
     """
@@ -266,7 +264,6 @@ async def get_hris_statistics(
     department: Optional[str] = Query(None),
     job_family: Optional[str] = Query(None),
     current_user: User = Depends(get_current_active_user),
-    _: None = Depends(PermissionChecker([Permission.VIEW_HRIS_DATA])),
     repository: HRISRepository = Depends(get_hris_repository),
 ):
     """

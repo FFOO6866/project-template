@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from job_pricing.repositories.ssg_repository import SSGRepository
 from job_pricing.models import SSGTSC, JobSkillsExtracted
+from job_pricing.exceptions import VectorSearchException
 
 logger = logging.getLogger(__name__)
 
@@ -283,15 +284,20 @@ class SkillMatchingService:
             )
 
         except Exception as e:
-            # If fuzzy search fails (e.g., pg_trgm not installed), fall back gracefully
-            logger.warning(f"Fuzzy matching failed: {e}")
-            return None
+            # PRODUCTION: If fuzzy search fails, raise exception - don't silently fail
+            # Note: pg_trgm extension must be installed for fuzzy matching to work
+            logger.error(f"Fuzzy matching failed: {e}")
+            raise VectorSearchException(
+                f"Skill fuzzy matching failed - ensure pg_trgm extension is installed: {str(e)}",
+                original_error=e
+            )
 
     def _string_similarity(self, s1: str, s2: str) -> float:
         """
-        Calculate simple string similarity (Levenshtein-based).
+        Calculate simple string similarity (character-based).
 
-        Fallback method when trigram similarity is not available.
+        Utility method for basic string comparison when full Levenshtein
+        is not required. NOT a fallback - for simple use cases only.
 
         Args:
             s1: First string
@@ -301,7 +307,6 @@ class SkillMatchingService:
             Similarity score (0.0-1.0)
         """
         # Simple implementation: ratio of common characters
-        # In production, use python-Levenshtein or similar
         if s1 == s2:
             return 1.0
 

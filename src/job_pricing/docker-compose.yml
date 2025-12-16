@@ -120,10 +120,12 @@ services:
       FEATURE_MERCER_INTEGRATION: ${FEATURE_MERCER_INTEGRATION}
       FEATURE_SSG_INTEGRATION: ${FEATURE_SSG_INTEGRATION}
 
-      # CORS
+      # CORS & API
       CORS_ORIGINS: ${CORS_ORIGINS}
+      API_BASE_URL: ${API_BASE_URL}
     volumes:
       - ./src:/app/src
+      - ./alembic:/app/alembic
       - ./data:/app/data
       - ./logs:/app/logs
     ports:
@@ -168,6 +170,8 @@ services:
       GLASSDOOR_PASSWORD: ${GLASSDOOR_PASSWORD}
       API_KEY_SALT: ${API_KEY_SALT}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      API_BASE_URL: ${API_BASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
     volumes:
       - ./src:/app/src
       - ./data:/app/data
@@ -204,6 +208,8 @@ services:
       SCRAPING_SCHEDULE_DAILY: ${SCRAPING_SCHEDULE_DAILY}
       API_KEY_SALT: ${API_KEY_SALT}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      API_BASE_URL: ${API_BASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
     volumes:
       - ./src:/app/src
       - ./data:/app/data
@@ -252,6 +258,10 @@ services:
 
       # Test-specific settings
       PYTHONPATH: /app
+
+      # Required config (no localhost fallbacks)
+      API_BASE_URL: ${API_BASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
     volumes:
       - ./src:/app/src
       - ./tests:/app/tests

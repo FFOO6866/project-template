@@ -50,7 +50,7 @@ class JobPricingRepository(BaseRepository[JobPricingRequest]):
         """
         return (
             self.session.query(JobPricingRequest)
-            .options(joinedload(JobPricingRequest.pricing_result))
+            .options(joinedload(JobPricingRequest.pricing_results))
             .filter(JobPricingRequest.id == request_id)
             .first()
         )
@@ -74,7 +74,7 @@ class JobPricingRepository(BaseRepository[JobPricingRequest]):
         return (
             self.session.query(JobPricingRequest)
             .options(
-                joinedload(JobPricingRequest.pricing_result).joinedload(
+                joinedload(JobPricingRequest.pricing_results).joinedload(
                     JobPricingResult.data_source_contributions
                 ),
                 joinedload(JobPricingRequest.mercer_mapping),

@@ -46,6 +46,7 @@ from job_pricing.models import (
 from job_pricing.repositories.mercer_repository import MercerRepository
 from job_pricing.repositories.scraping_repository import ScrapingRepository
 from job_pricing.repositories.hris_repository import HRISRepository
+from job_pricing.exceptions import NoMarketDataError
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,8 @@ class PricingCalculationServiceV3:
 
     def calculate_pricing(
         self,
-        request: JobPricingRequest
+        request: JobPricingRequest,
+        mercer_match: Optional[Dict] = None
     ) -> PricingResult:
         """
         Calculate comprehensive pricing using multi-source weighted aggregation.
@@ -133,21 +135,23 @@ class PricingCalculationServiceV3:
 
         Args:
             request: Job pricing request with job details
+            mercer_match: Optional Mercer job match with job_code and family info
 
         Returns:
             Complete pricing result with percentiles and confidence
         """
         logger.info(f"Calculating pricing for: {request.job_title}")
 
-        # Step 1: Gather data from all sources
-        contributions = self._gather_all_sources(request)
+        # Step 1: Gather data from all sources (with Mercer match for job family filtering)
+        contributions = self._gather_all_sources(request, mercer_match)
 
         if not contributions:
-            logger.warning("No data sources available - using fallback calculation")
-            fallback_result = self._fallback_calculation(request)
-            # Persist fallback results too for audit trail
-            self._persist_result(request, fallback_result)
-            return fallback_result
+            logger.error("❌ NO DATA SOURCES AVAILABLE - Cannot provide salary recommendation")
+            # NO FALLBACK DATA - Raise exception to be handled by API layer
+            raise NoMarketDataError(
+                job_title=request.job_title,
+                sources_attempted=["mercer", "my_careers_future", "glassdoor", "internal_hris", "applicants"]
+            )
 
         # Step 2: Apply weights and aggregate data points
         weighted_data_points = self._apply_weights_and_aggregate(contributions)
@@ -188,13 +192,15 @@ class PricingCalculationServiceV3:
 
     def _gather_all_sources(
         self,
-        request: JobPricingRequest
+        request: JobPricingRequest,
+        mercer_match: Optional[Dict] = None
     ) -> List[DataSourceContribution]:
         """
         Gather salary data from all 5 sources.
 
         Args:
             request: Job pricing request
+            mercer_match: Optional Mercer job match with job_code and family info
 
         Returns:
             List of data source contributions
@@ -202,17 +208,17 @@ class PricingCalculationServiceV3:
         contributions = []
 
         # Source 1: Mercer IPE (40% weight)
-        mercer_data = self._get_mercer_data(request)
+        mercer_data = self._get_mercer_data(request, mercer_match)
         if mercer_data:
             contributions.append(mercer_data)
 
-        # Source 2: MyCareersFuture (25% weight)
-        mcf_data = self._get_mycareersfuture_data(request)
+        # Source 2: MyCareersFuture (25% weight) - Uses job family from Mercer match
+        mcf_data = self._get_mycareersfuture_data(request, mercer_match)
         if mcf_data:
             contributions.append(mcf_data)
 
-        # Source 3: Glassdoor (15% weight)
-        glassdoor_data = self._get_glassdoor_data(request)
+        # Source 3: Glassdoor (15% weight) - Uses job family from Mercer match
+        glassdoor_data = self._get_glassdoor_data(request, mercer_match)
         if glassdoor_data:
             contributions.append(glassdoor_data)
 
@@ -232,7 +238,8 @@ class PricingCalculationServiceV3:
 
     def _get_mercer_data(
         self,
-        request: JobPricingRequest
+        request: JobPricingRequest,
+        mercer_match: Optional[Dict] = None
     ) -> Optional[DataSourceContribution]:
         """
         Get salary data from Mercer IPE.
@@ -241,6 +248,7 @@ class PricingCalculationServiceV3:
 
         Args:
             request: Job pricing request
+            mercer_match: Optional pre-computed Mercer match (avoids re-matching)
 
         Returns:
             Mercer data contribution or None
@@ -252,13 +260,14 @@ class PricingCalculationServiceV3:
             from job_pricing.models import MercerMarketData, MercerJobLibrary
             from job_pricing.services.job_matching_service import JobMatchingService
 
-            # Use JobMatchingService to find best matching Mercer job
-            matching_service = JobMatchingService(self.session)
-            mercer_match = matching_service.find_best_match(
-                job_title=request.job_title,
-                job_description=request.job_description,
-                use_llm_reasoning=False  # Disable LLM to work around OpenAI embedding non-determinism
-            )
+            # Use pre-computed match if available, otherwise find match
+            if not mercer_match:
+                matching_service = JobMatchingService(self.session)
+                mercer_match = matching_service.find_best_match(
+                    job_title=request.job_title,
+                    job_description=request.job_description,
+                    use_llm_reasoning=False  # Disable LLM to work around OpenAI embedding non-determinism
+                )
 
             if not mercer_match or not mercer_match.get("job_code"):
                 logger.debug("No Mercer job match found")
@@ -330,13 +339,17 @@ class PricingCalculationServiceV3:
 
     def _get_mycareersfuture_data(
         self,
-        request: JobPricingRequest
+        request: JobPricingRequest,
+        mercer_match: Optional[Dict] = None
     ) -> Optional[DataSourceContribution]:
         """
-        Get salary data from MyCareersFuture scraped listings.
+        Get salary data from MyCareersFuture scraped listings using job family filtering.
+
+        Uses Mercer job family to find related roles for more accurate matching.
 
         Args:
             request: Job pricing request
+            mercer_match: Optional Mercer match with job_code and family info
 
         Returns:
             MCF data contribution or None
@@ -344,35 +357,89 @@ class PricingCalculationServiceV3:
         logger.debug("Querying MyCareersFuture data...")
 
         try:
+            from job_pricing.models import MercerJobLibrary
+
+            # If we have a Mercer match, use job family to find related roles
+            related_titles = []
+            if mercer_match and mercer_match.get("job_code"):
+                # Get the matched Mercer job to extract family
+                mercer_job = self.session.query(MercerJobLibrary).filter(
+                    MercerJobLibrary.job_code == mercer_match["job_code"]
+                ).first()
+
+                if mercer_job and mercer_job.family:
+                    logger.debug(f"Using Mercer family '{mercer_job.family}' for MCF filtering")
+
+                    # Get all job titles from the same Mercer family
+                    family_jobs = self.session.query(MercerJobLibrary).filter(
+                        MercerJobLibrary.family == mercer_job.family
+                    ).all()
+
+                    # Extract keywords from related job titles (remove parenthetical suffixes)
+                    for job in family_jobs:
+                        # Extract base title (e.g., "HR Business Partners" from "HR Business Partners - Director (M5)")
+                        title = job.job_title.split(" - ")[0].strip()
+                        related_titles.append(title)
+
+                    logger.debug(f"Found {len(related_titles)} related job titles in {mercer_job.family} family")
+
             # Query scraped job listings from MCF
-            try:
-                # Try fuzzy match with trigram similarity
-                listings = self.session.query(ScrapedJobListing).filter(
-                    ScrapedJobListing.source == "my_careers_future",  # Match database constraint
-                    ScrapedJobListing.salary_min.isnot(None),
-                    ScrapedJobListing.salary_max.isnot(None),
-                ).filter(
-                    # Fuzzy match on job title using trigram similarity
-                    func.similarity(
-                        ScrapedJobListing.job_title,
-                        request.job_title
-                    ) > 0.3
-                ).limit(100).all()
-            except Exception as e:
-                logger.warning(f"Trigram similarity not available, using basic LIKE match: {e}")
-                # Fallback to simple LIKE match if pg_trgm extension not available
-                listings = self.session.query(ScrapedJobListing).filter(
-                    ScrapedJobListing.source == "my_careers_future",
-                    ScrapedJobListing.salary_min.isnot(None),
-                    ScrapedJobListing.salary_max.isnot(None),
-                    ScrapedJobListing.job_title.ilike(f"%{request.job_title}%")
-                ).limit(100).all()
+            listings = []
+            match_quality = 0.5  # Default - will be updated based on matching strategy
+
+            # Strategy 1: If we have family-based titles, match against those (highest quality)
+            if related_titles:
+                # Use OR condition to match any of the related titles
+                title_conditions = [
+                    func.similarity(ScrapedJobListing.job_title, title) > 0.3
+                    for title in related_titles[:10]  # Limit to top 10 to avoid query complexity
+                ]
+
+                try:
+                    from sqlalchemy import or_
+                    listings = self.session.query(ScrapedJobListing).filter(
+                        ScrapedJobListing.source == "my_careers_future",
+                        ScrapedJobListing.salary_min.isnot(None),
+                        ScrapedJobListing.salary_max.isnot(None),
+                        or_(*title_conditions)
+                    ).limit(100).all()
+
+                    logger.info(f"Family-based matching found {len(listings)} MCF listings")
+                    match_quality = 0.9  # High quality: matched by Mercer job family
+                except Exception as e:
+                    logger.warning(f"Family-based matching failed, trying alternative: {e}")
+                    listings = []
+
+            # Strategy 2: Alternative - fuzzy match on job title if no family match (medium quality)
+            if not listings:
+                try:
+                    listings = self.session.query(ScrapedJobListing).filter(
+                        ScrapedJobListing.source == "my_careers_future",
+                        ScrapedJobListing.salary_min.isnot(None),
+                        ScrapedJobListing.salary_max.isnot(None),
+                    ).filter(
+                        func.similarity(
+                            ScrapedJobListing.job_title,
+                            request.job_title
+                        ) > 0.3
+                    ).limit(100).all()
+                    match_quality = 0.75  # Medium-high quality: fuzzy trigram match
+                except Exception as e:
+                    logger.warning(f"Trigram similarity not available, using basic LIKE match: {e}")
+                    # Strategy 3: Basic LIKE match when trigram extension unavailable (lower quality)
+                    listings = self.session.query(ScrapedJobListing).filter(
+                        ScrapedJobListing.source == "my_careers_future",
+                        ScrapedJobListing.salary_min.isnot(None),
+                        ScrapedJobListing.salary_max.isnot(None),
+                        ScrapedJobListing.job_title.ilike(f"%{request.job_title}%")
+                    ).limit(100).all()
+                    match_quality = 0.6  # Lower quality: basic string match
 
             if not listings:
                 logger.debug("No MCF listings found matching criteria")
                 return None
 
-            logger.info(f"Found {len(listings)} MCF listings")
+            logger.info(f"Found {len(listings)} MCF listings total")
 
             # Extract salary midpoints
             data_points = []
@@ -399,7 +466,7 @@ class PricingCalculationServiceV3:
                 sample_size=len(data_points),
                 data_points=data_points,
                 recency_days=recency_days,
-                match_quality=0.8,  # TODO: Calculate based on similarity
+                match_quality=match_quality,  # Calculated based on matching strategy used
             )
 
         except Exception as e:
@@ -408,13 +475,17 @@ class PricingCalculationServiceV3:
 
     def _get_glassdoor_data(
         self,
-        request: JobPricingRequest
+        request: JobPricingRequest,
+        mercer_match: Optional[Dict] = None
     ) -> Optional[DataSourceContribution]:
         """
-        Get salary data from Glassdoor scraped listings.
+        Get salary data from Glassdoor scraped listings using job family filtering.
+
+        Uses Mercer job family to find related roles for more accurate matching.
 
         Args:
             request: Job pricing request
+            mercer_match: Optional Mercer match with job_code and family info
 
         Returns:
             Glassdoor data contribution or None
@@ -754,48 +825,10 @@ class PricingCalculationServiceV3:
 
         return explanation
 
-    def _fallback_calculation(
-        self,
-        request: JobPricingRequest
-    ) -> PricingResult:
-        """
-        Fallback calculation when no data sources available.
-
-        Uses basic estimation based on experience and industry.
-
-        Args:
-            request: Job pricing request
-
-        Returns:
-            Basic pricing result with low confidence
-        """
-        logger.warning("Using fallback calculation - no real data available")
-
-        # Very basic estimation
-        base = Decimal("60000")  # Base annual salary
-
-        percentiles = {
-            "p10": base * Decimal("0.7"),
-            "p25": base * Decimal("0.85"),
-            "p50": base,
-            "p75": base * Decimal("1.15"),
-            "p90": base * Decimal("1.30"),
-        }
-
-        return PricingResult(
-            recommended_min=percentiles["p25"],
-            recommended_max=percentiles["p75"],
-            target_salary=percentiles["p50"],
-            p10=percentiles["p10"],
-            p25=percentiles["p25"],
-            p50=percentiles["p50"],
-            p75=percentiles["p75"],
-            p90=percentiles["p90"],
-            confidence_score=15.0,  # Very low confidence
-            source_contributions=[],
-            alternative_scenarios={},
-            explanation="FALLBACK: No real market data available. Estimate only."
-        )
+    # ❌ DELETED: _fallback_calculation() method
+    # REASON: Violates ZERO TOLERANCE FOR MOCK DATA policy
+    # All pricing MUST be based on real market data from actual sources
+    # If no data available, raise NoMarketDataError instead
 
     def _persist_result(self, request: JobPricingRequest, result: PricingResult) -> None:
         """

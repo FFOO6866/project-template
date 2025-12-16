@@ -7,7 +7,7 @@ Main application entry point with all middleware and route configuration.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -300,6 +300,42 @@ app.include_router(
 # --------------------------------------------------------------------------
 # Exception Handlers
 # --------------------------------------------------------------------------
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc: HTTPException):
+    """
+    HTTPException handler with consistent error format.
+
+    Returns errors in the same format as the global exception handler
+    for frontend consistency.
+    """
+    # Determine error code from status
+    error_codes = {
+        400: "BAD_REQUEST",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        413: "REQUEST_ENTITY_TOO_LARGE",
+        422: "UNPROCESSABLE_ENTITY",
+        429: "RATE_LIMIT_EXCEEDED",
+        500: "INTERNAL_SERVER_ERROR",
+        503: "SERVICE_UNAVAILABLE"
+    }
+
+    error_code = error_codes.get(exc.status_code, "HTTP_ERROR")
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": error_code,
+                "message": str(exc.detail),
+                "details": None
+            }
+        }
+    )
 
 
 @app.exception_handler(Exception)

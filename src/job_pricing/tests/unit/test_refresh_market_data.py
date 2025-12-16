@@ -1,7 +1,15 @@
 """
-Unit Tests for refresh_market_data Celery Task
+Unit Tests for refresh_market_data Celery Task (TIER 1)
 
 Tests the market data refresh task that runs daily to update Mercer and SSG data.
+
+TESTING TIER: 1 (Unit Tests)
+- Uses mocks for external dependencies (database, file system, loaders)
+- Tests logic in isolation
+- NO real infrastructure required
+
+NOTE: Mocking is ONLY acceptable in Tier 1 unit tests per CLAUDE.md.
+Tier 2-3 integration tests must use real infrastructure.
 """
 
 import pytest
@@ -12,13 +20,22 @@ from pathlib import Path
 from src.job_pricing.worker import refresh_market_data
 
 
+@pytest.mark.unit
 class TestRefreshMarketDataTask:
-    """Tests for refresh_market_data Celery task"""
+    """
+    Tier 1 Unit Tests for refresh_market_data Celery task.
 
-    @patch('src.job_pricing.worker.get_db')
-    @patch('src.job_pricing.worker.MercerJobLibraryLoader')
-    @patch('src.job_pricing.worker.SSGJobRolesLoader')
-    @patch('src.job_pricing.worker.Path')
+    Uses mocks for external dependencies. This is acceptable for unit tests only.
+
+    NOTE: Since imports happen inside the function, we patch at the source:
+    - pathlib.Path instead of src.job_pricing.worker.Path
+    - job_pricing.core.database.get_db instead of src.job_pricing.worker.get_db
+    """
+
+    @patch('job_pricing.core.database.get_db')
+    @patch('job_pricing.data.ingestion.mercer_job_library_loader.MercerJobLibraryLoader')
+    @patch('job_pricing.data.ingestion.ssg_job_roles_loader.SSGJobRolesLoader')
+    @patch('pathlib.Path')
     def test_refresh_market_data_success_both_sources(
         self,
         mock_path,
@@ -38,7 +55,7 @@ class TestRefreshMarketDataTask:
         mock_ssg_file.exists.return_value = True
 
         mock_data_dir = MagicMock()
-        mock_data_dir.__truediv__ = lambda self, x: mock_mercer_file if 'mercer' in str(x) else mock_ssg_file
+        mock_data_dir.__truediv__ = lambda self, x: mock_mercer_file if 'mercer' in str(x).lower() else mock_ssg_file
 
         mock_path.return_value.__truediv__.return_value = mock_data_dir
 
@@ -69,8 +86,8 @@ class TestRefreshMarketDataTask:
         assert len(result["errors"]) == 0
         assert result["execution_time_seconds"] >= 0
 
-    @patch('src.job_pricing.worker.get_db')
-    @patch('src.job_pricing.worker.Path')
+    @patch('job_pricing.core.database.get_db')
+    @patch('pathlib.Path')
     def test_refresh_market_data_no_files_found(
         self,
         mock_path,
@@ -98,9 +115,9 @@ class TestRefreshMarketDataTask:
         assert result["mercer_updated"] == 0
         assert result["ssg_updated"] == 0
 
-    @patch('src.job_pricing.worker.get_db')
-    @patch('src.job_pricing.worker.MercerJobLibraryLoader')
-    @patch('src.job_pricing.worker.Path')
+    @patch('job_pricing.core.database.get_db')
+    @patch('job_pricing.data.ingestion.mercer_job_library_loader.MercerJobLibraryLoader')
+    @patch('pathlib.Path')
     def test_refresh_market_data_mercer_error_continues(
         self,
         mock_path,
@@ -132,7 +149,7 @@ class TestRefreshMarketDataTask:
         assert len(result["errors"]) > 0
         assert any("Mercer" in error for error in result["errors"])
 
-    @patch('src.job_pricing.worker.get_db')
+    @patch('job_pricing.core.database.get_db')
     def test_refresh_market_data_database_error(
         self,
         mock_get_db
@@ -148,9 +165,9 @@ class TestRefreshMarketDataTask:
         assert result["success"] is False
         assert len(result["errors"]) > 0
 
-    @patch('src.job_pricing.worker.get_db')
-    @patch('src.job_pricing.worker.MercerJobLibraryLoader')
-    @patch('src.job_pricing.worker.Path')
+    @patch('job_pricing.core.database.get_db')
+    @patch('job_pricing.data.ingestion.mercer_job_library_loader.MercerJobLibraryLoader')
+    @patch('pathlib.Path')
     def test_refresh_market_data_loader_configuration(
         self,
         mock_path,
@@ -191,29 +208,33 @@ class TestRefreshMarketDataTask:
             show_progress=False
         )
 
-    def test_refresh_market_data_execution_time_tracking(self):
+    @patch('job_pricing.core.database.get_db')
+    @patch('pathlib.Path')
+    def test_refresh_market_data_execution_time_tracking(
+        self,
+        mock_path,
+        mock_get_db
+    ):
         """Test that execution time is tracked"""
-        with patch('src.job_pricing.worker.get_db') as mock_get_db:
-            mock_db_session = MagicMock()
-            mock_get_db.return_value = iter([mock_db_session])
+        mock_db_session = MagicMock()
+        mock_get_db.return_value = iter([mock_db_session])
 
-            with patch('src.job_pricing.worker.Path') as mock_path:
-                # Mock files don't exist
-                mock_file = MagicMock()
-                mock_file.exists.return_value = False
+        # Mock files don't exist
+        mock_file = MagicMock()
+        mock_file.exists.return_value = False
 
-                mock_data_dir = MagicMock()
-                mock_data_dir.__truediv__ = lambda self, x: mock_file
+        mock_data_dir = MagicMock()
+        mock_data_dir.__truediv__ = lambda self, x: mock_file
 
-                mock_path.return_value.__truediv__.return_value = mock_data_dir
+        mock_path.return_value.__truediv__.return_value = mock_data_dir
 
-                # Execute task
-                result = refresh_market_data()
+        # Execute task
+        result = refresh_market_data()
 
-                # Verify execution time is tracked
-                assert "execution_time_seconds" in result
-                assert isinstance(result["execution_time_seconds"], (int, float))
-                assert result["execution_time_seconds"] >= 0
+        # Verify execution time is tracked
+        assert "execution_time_seconds" in result
+        assert isinstance(result["execution_time_seconds"], (int, float))
+        assert result["execution_time_seconds"] >= 0
 
 
 class TestRefreshMarketDataIntegration:

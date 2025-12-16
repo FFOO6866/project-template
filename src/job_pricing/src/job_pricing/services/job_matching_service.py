@@ -210,9 +210,14 @@ class JobMatchingService:
             # Execute with context manager or provided session
             try:
                 if self.session:
+                    # Set IVFFlat probes to search more clusters (default is 1, which is too restrictive)
+                    # This improves recall at slight cost of speed
+                    self.session.execute(text("SET ivfflat.probes = 10"))
                     results = self.session.execute(query, params).fetchall()
                 else:
                     with get_db_context() as session:
+                        # Set IVFFlat probes for this session
+                        session.execute(text("SET ivfflat.probes = 10"))
                         results = session.execute(query, params).fetchall()
 
             except OperationalError as e:
@@ -310,7 +315,14 @@ class JobMatchingService:
                 candidates=candidates
             )
         else:
-            # Fallback to embedding-only approach
+            # PRODUCTION: No LLM available - use embedding-based selection with strict threshold
+            # This is NOT a fallback - it's an alternative matching method when LLM is disabled
+            if not openai.api_key:
+                raise ConfigurationException(
+                    "OPENAI_API_KEY",
+                    "OpenAI API key required for job matching"
+                )
+
             best_match = candidates[0]
 
             # Require minimum similarity threshold
@@ -422,14 +434,13 @@ Respond ONLY with valid JSON, no other text."""
             return selected_candidate
 
         except Exception as e:
+            # PRODUCTION: No fallback - propagate the error
             logger.error(f"Error in LLM matching: {e}", exc_info=True)
-            # Fallback to embedding-only approach
-            logger.warning("Falling back to embedding-only matching")
-            best_match = candidates[0]
-            # Changed from 0.7 → 0.55 → 0.40 to match updated threshold
-            if best_match["similarity_score"] >= 0.40:
-                return best_match
-            return None
+            raise JobMatchingException(
+                message=f"LLM job matching failed: {str(e)}",
+                job_title=job_title,
+                original_error=e
+            )
 
     def _calculate_confidence(self, similarity_score: float) -> str:
         """

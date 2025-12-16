@@ -95,9 +95,18 @@ export function useMyCareersFutureJobs(
           ...(location && { location })
         })
 
+        // Get JWT token from localStorage
+        const token = typeof window !== 'undefined' ? localStorage.getItem('job_pricing_access_token') : null
+
         const response = await fetch(
           `${config.api.baseUrl}/api/v1/external/mycareersfuture?${params}`,
-          { signal: abortController.signal }
+          {
+            signal: abortController.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` }),
+            },
+          }
         )
 
         if (!response.ok) {

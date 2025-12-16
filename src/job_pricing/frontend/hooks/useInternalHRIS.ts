@@ -81,8 +81,25 @@ export function useInternalHRIS(
         if (department) params.set('department', department)
         if (jobTitle) params.set('job_title', jobTitle)
 
+        // Get JWT token from localStorage
+        const token = typeof window !== 'undefined' ? localStorage.getItem('job_pricing_access_token') : null
+
+        // Skip fetch if no authentication token
+        if (!token) {
+          console.warn('[useInternalHRIS] No authentication token found, skipping fetch')
+          setData([])
+          setLoading(false)
+          return
+        }
+
         const response = await fetch(
-          `${config.api.baseUrl}/api/v1/internal/hris/benchmarks?${params}`
+          `${config.api.baseUrl}/api/v1/internal/hris/benchmarks?${params}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` }),
+            },
+          }
         )
 
         if (!response.ok) {

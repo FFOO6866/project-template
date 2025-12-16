@@ -234,13 +234,52 @@ class JobPricingRequest(Base, TimestampMixin):
         comment="Error message if processing failed"
     )
 
+    # Deduplication Fields (Option 1+: Smart Caching)
+    request_hash = Column(
+        String(64),
+        nullable=True,
+        unique=True,
+        index=True,
+        comment="SHA256 hash of (job_title + location + user_id) for deduplication"
+    )
+
+    first_requested_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        server_default=text("NOW()"),
+        comment="First time this unique job combination was requested"
+    )
+
+    last_requested_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        server_default=text("NOW()"),
+        comment="Most recent time this job was requested"
+    )
+
+    request_count = Column(
+        Integer,
+        nullable=False,
+        server_default=text("1"),
+        comment="Number of times this job has been requested (tracks popularity)"
+    )
+
     # Relationships
-    pricing_result = relationship(
+    # Updated to allow multiple results for versioning (uselist=True)
+    pricing_results = relationship(
         "JobPricingResult",
         back_populates="request",
-        uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        order_by="desc(JobPricingResult.version)"
     )
+
+    # Backward compatibility: Latest result
+    @property
+    def pricing_result(self):
+        """Get latest pricing result for backward compatibility"""
+        if self.pricing_results:
+            return self.pricing_results[0]  # Ordered by version DESC
+        return None
 
     mercer_mapping = relationship(
         "MercerJobMapping",

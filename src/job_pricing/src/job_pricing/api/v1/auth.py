@@ -3,7 +3,7 @@ Authentication Endpoints - Login, Register, Token Refresh, User Management
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -194,7 +194,7 @@ async def login(
     )
 
     # Store refresh token in database
-    refresh_token_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    refresh_token_expires = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     refresh_token = RefreshToken(
         user_id=user.id,
@@ -207,7 +207,7 @@ async def login(
     db.add(refresh_token)
 
     # Update last login
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc)
     db.commit()
 
     logger.info(f"User logged in: {user.email}")
@@ -273,7 +273,7 @@ async def refresh_token(
             )
 
         # Check if token is expired
-        if refresh_token.expires_at < datetime.utcnow():
+        if refresh_token.expires_at < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token expired"
@@ -298,10 +298,10 @@ async def refresh_token(
 
         # Revoke old refresh token
         refresh_token.revoked = True
-        refresh_token.revoked_at = datetime.utcnow()
+        refresh_token.revoked_at = datetime.now(timezone.utc)
 
         # Store new refresh token
-        refresh_token_expires = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        refresh_token_expires = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
         new_refresh_token = RefreshToken(
             user_id=user.id,
             token=new_refresh_token_str,
@@ -345,7 +345,7 @@ async def logout(
 
     if token:
         token.revoked = True
-        token.revoked_at = datetime.utcnow()
+        token.revoked_at = datetime.now(timezone.utc)
         db.commit()
 
     logger.info(f"User logged out: {current_user.email}")
@@ -399,7 +399,7 @@ async def update_current_user(
     if update_data.phone is not None:
         current_user.phone = update_data.phone
 
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(current_user)
@@ -427,7 +427,7 @@ async def change_password(
 
     # Update password
     current_user.hashed_password = hash_password(password_data.new_password)
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
 
     db.commit()
 
@@ -490,7 +490,7 @@ async def update_user_role(
         )
 
     user.role = role_data.role.value
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(user)
@@ -525,7 +525,7 @@ async def deactivate_user(
         )
 
     user.is_active = False
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
 
     db.commit()
 

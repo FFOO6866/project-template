@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Integer,
     Numeric,
+    Boolean,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -208,18 +209,56 @@ class JobPricingResult(Base):
         comment="Data consistency score (0.00-100.00)"
     )
 
+    # Versioning Fields (Option 1+: Smart Caching with Limited Versioning)
+    version = Column(
+        Integer,
+        nullable=False,
+        server_default=text("1"),
+        comment="Version number for this request (increments on recalculation)"
+    )
+
+    is_latest = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("TRUE"),
+        index=True,
+        comment="True if this is the latest version for this request"
+    )
+
+    calculated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("NOW()"),
+        comment="Timestamp when salary was calculated"
+    )
+
+    expires_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("NOW() + INTERVAL '24 hours'"),
+        index=True,
+        comment="Cache expiry timestamp (smart TTL based on data sources)"
+    )
+
+    cache_hit = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("FALSE"),
+        comment="True if this result was served from cache (for analytics)"
+    )
+
     # Audit Fields
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("NOW()"),
-        comment="Timestamp when result was created"
+        comment="Timestamp when result record was created"
     )
 
     # Relationships
     request = relationship(
         "JobPricingRequest",
-        back_populates="pricing_result"
+        back_populates="pricing_results"
     )
 
     data_source_contributions = relationship(
@@ -234,11 +273,20 @@ class JobPricingResult(Base):
             "confidence_level IN ('High', 'Medium', 'Low')",
             name="check_confidence_level"
         ),
-        UniqueConstraint("request_id", name="uq_result_request"),
-        # Indexes
+        # Versioning constraints
+        UniqueConstraint("request_id", "version", name="uq_request_version"),
+        # Partial unique index: only one latest result per request
+        Index(
+            "idx_latest_result",
+            "request_id", "is_latest",
+            unique=True,
+            postgresql_where=text("is_latest = TRUE")
+        ),
+        # Regular indexes
         Index("idx_pricing_results_request", "request_id"),
         Index("idx_pricing_results_confidence", "confidence_level"),
         Index("idx_pricing_results_created", "created_at", postgresql_ops={"created_at": "DESC"}),
+        Index("idx_pricing_results_expires", "expires_at"),  # For cache cleanup
     )
 
     def __repr__(self) -> str:

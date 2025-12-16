@@ -60,6 +60,26 @@ class InsufficientDataException(JobPricingException):
         super().__init__(f"Insufficient data: {message}")
 
 
+class NoMarketDataError(JobPricingException):
+    """
+    Raised when NO market data sources are available for pricing calculation.
+
+    This is a HARD FAILURE - no fallback/mock data should be used.
+    The API layer must return a proper error to the client.
+
+    NO MOCK DATA - This indicates we cannot provide a recommendation.
+    """
+    def __init__(self, job_title: str, sources_attempted: list = None):
+        self.job_title = job_title
+        self.sources_attempted = sources_attempted or []
+        message = (
+            f"No market data available for job: '{job_title}'. "
+            f"Unable to generate salary recommendation. "
+            f"Attempted sources: {', '.join(sources_attempted) if sources_attempted else 'all sources'}."
+        )
+        super().__init__(message)
+
+
 class DatabaseConnectionException(JobPricingException):
     """Raised when database connection or query fails."""
 

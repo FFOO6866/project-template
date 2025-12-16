@@ -6,7 +6,7 @@ and role-based access control (RBAC).
 """
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -76,7 +76,7 @@ async def get_current_user(
             )
 
         # Update last login timestamp
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         db.commit()
 
         return user
@@ -153,7 +153,7 @@ async def get_optional_current_user(
             return None
 
         # Update last login timestamp
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         db.commit()
 
         return user

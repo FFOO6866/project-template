@@ -127,6 +127,11 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=False
       - LOG_LEVEL=INFO
+      # Required config (no defaults)
+      - API_BASE_URL=${API_BASE_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - API_KEY_SALT=${API_KEY_SALT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -160,6 +165,10 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - API_BASE_URL=${API_BASE_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - API_KEY_SALT=${API_KEY_SALT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -184,6 +193,10 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - API_BASE_URL=${API_BASE_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - API_KEY_SALT=${API_KEY_SALT}
     depends_on:
       postgres:
         condition: service_healthy

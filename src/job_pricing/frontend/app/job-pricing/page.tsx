@@ -10,6 +10,7 @@ import { config } from "@/lib/config"
 import {
   useSalaryRecommendation,
   transformToMercerBenchmarks,
+  normalizeJobFamily,
 } from "@/hooks/useSalaryRecommendation"
 import { useMyCareersFutureJobs } from "@/hooks/useMyCareersFutureJobs"
 import { useGlassdoorData } from "@/hooks/useGlassdoorData"
@@ -37,11 +38,21 @@ import {
   Edit3,
   X,
   Plus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+interface MercerMatch {
+  mercer_job_code: string
+  mercer_job_title: string
+  mercer_job_description: string
+  similarity_score: number
+  job_family?: string
+}
 
 interface JobPricingData {
   jobTitle: string
@@ -51,11 +62,16 @@ interface JobPricingData {
   employmentType: string
   internalGrade: string
   jobFamily: string
+  industry?: string
   skillsRequired: string[]
+  keyResponsibilities?: string[]
+  qualifications?: string[]
+  yearsOfExperienceMin?: number
   jobSummary: string
   alternativeTitles: string[]
   mercerJobCode: string
   mercerJobDescription: string
+  mercerMatches: MercerMatch[]
   uploadedFiles: File[]
 }
 
@@ -114,6 +130,7 @@ export default function DynamicJobPricingPage() {
     alternativeTitles: [],
     mercerJobCode: "",
     mercerJobDescription: "",
+    mercerMatches: [],
     uploadedFiles: [],
   })
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -135,6 +152,7 @@ export default function DynamicJobPricingPage() {
   const [hoveredDataSource, setHoveredDataSource] = useState<string | null>(null)
   const [editingAlternatives, setEditingAlternatives] = useState(false)
   const [newAlternativeTitle, setNewAlternativeTitle] = useState("")
+  const [expandedMercerCards, setExpandedMercerCards] = useState<Set<number>>(new Set())
 
   // API hooks for fetching real data (replaces hardcoded mock data)
   const {
@@ -147,7 +165,7 @@ export default function DynamicJobPricingPage() {
     location: jobData.location,
     jobFamily: jobData.jobFamily,
     careerLevel: jobData.internalGrade,
-    enabled: !!jobData.jobTitle,
+    enabled: false, // Disabled - salary data is only fetched when user clicks "Analyze Job Pricing"
   })
 
   const {
@@ -193,6 +211,52 @@ export default function DynamicJobPricingPage() {
     jobFamily: jobData.jobFamily,
     enabled: !!jobData.jobTitle,
   })
+
+  // Transform API data to UI format
+  // MCF jobs transformation
+  const transformedMcfJobs = mcfJobs.map((job) => ({
+    company: job.company || "Unknown Company",
+    jobTitle: job.title,
+    experienceRequired: job.employment_type || "N/A",
+    salaryRange: job.salary_min && job.salary_max
+      ? `SGD ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`
+      : "Not disclosed",
+    datePosted: job.posted_date || new Date().toISOString(),
+    skillsMatch: "N/A", // Not available from API
+    salary_min: job.salary_min || 0,
+    salary_max: job.salary_max || 0,
+  }))
+
+  // Internal HRIS data transformation
+  const transformedInternalHRISData = internalHRISData.map((emp) => ({
+    name: emp.employee_id || `Employee ${emp.id}`, // Anonymized name
+    dept: emp.department,
+    title: emp.job_title,
+    grade: "N/A", // Not available from API
+    currentSalary: emp.current_salary,
+    monthlySalary: Math.round(emp.current_salary / 12), // Derive monthly from annual
+    annualCash: emp.current_salary, // Assuming current_salary is annual
+    tenure: `${emp.experience_years} years`,
+    performance: emp.performance_rating || "N/A",
+  }))
+
+  // Glassdoor data transformation
+  const transformedGlassdoorData = glassdoorData.map((item) => ({
+    company: item.company || "Various Companies",
+    jobTitle: item.job_title,
+    salaryRange: item.salary_estimate
+      ? `SGD ${item.salary_estimate.min.toLocaleString()} - ${item.salary_estimate.max.toLocaleString()}`
+      : "Not disclosed",
+    rating: item.rating || 0,
+    companyRating: item.rating?.toFixed(1) || "N/A",
+    reviewCount: item.reviews_count || 0,
+    salary_min: item.salary_estimate?.min || 0,
+    salary_max: item.salary_estimate?.max || 0,
+    experienceRequired: "N/A", // Not available from Glassdoor API
+    datePosted: new Date().toISOString(), // Not available from Glassdoor API - use current date
+    // Derive reliability from review count - High if many reviews
+    reliability: (item.reviews_count || 0) >= 50 ? "High" : (item.reviews_count || 0) >= 10 ? "Medium" : "Low",
+  }))
 
   // Transform salary recommendation data to Mercer benchmark format
   const mercerBenchmarkData = transformToMercerBenchmarks(salaryRecommendationData)
@@ -244,26 +308,26 @@ export default function DynamicJobPricingPage() {
 
   // Function to get MyCareersFuture job listings from API hook
   const getJobListingData = (jobTitle: string, jobFamily: string) => {
-    // Return real data from API hook
+    // Return real data from API hook (transformed to UI format)
     // Feature is disabled by default (NEXT_PUBLIC_FEATURE_MYCAREERSFUTURE=false)
     if (mcfDisabled) {
       return []
     }
 
-    // Return all data from hook (filtering happens on backend)
-    return mcfJobs
+    // Return transformed data from hook (filtering happens on backend)
+    return transformedMcfJobs
   }
 
   // Function to get Glassdoor salary data from API hook
   const getGlassdoorData = (jobTitle: string, jobFamily: string) => {
-    // Return real data from API hook
+    // Return real data from API hook (transformed to UI format)
     // Feature is disabled by default (NEXT_PUBLIC_FEATURE_GLASSDOOR=false)
     if (glassdoorDisabled) {
       return []
     }
 
-    // Return all data from hook (filtering happens on backend)
-    return glassdoorData
+    // Return transformed data from hook (filtering happens on backend)
+    return transformedGlassdoorData
   }
 
   // Function to get Mercer benchmark data from salary recommendation API
@@ -284,19 +348,24 @@ export default function DynamicJobPricingPage() {
 
   // Calculate insights based on actual data
   const calculateMarketInsights = () => {
-    const salaryRanges = myCareersFutureJobListings.map((job) => {
-      const range = job.salaryRange.replace("SGD ", "").split(" - ")
-      return {
-        min: Number.parseInt(range[0].replace(",", "")),
-        max: Number.parseInt(range[1].replace(",", "")),
-      }
-    })
+    // Filter jobs that have salary data
+    const jobsWithSalary = myCareersFutureJobListings.filter(
+      (job) => job.salary_min > 0 && job.salary_max > 0
+    )
 
-    const avgMin = salaryRanges.reduce((sum, range) => sum + range.min, 0) / salaryRanges.length
-    const avgMax = salaryRanges.reduce((sum, range) => sum + range.max, 0) / salaryRanges.length
-    const avgSkillsMatch =
-      myCareersFutureJobListings.reduce((sum, job) => sum + Number.parseInt(job.skillsMatch.replace("%", "")), 0) /
-      myCareersFutureJobListings.length
+    if (jobsWithSalary.length === 0) {
+      return { avgMin: 0, avgMax: 0, avgSkillsMatch: 0, totalListings: 0 }
+    }
+
+    const salaryRanges = jobsWithSalary.map((job) => ({
+      min: job.salary_min,
+      max: job.salary_max,
+    }))
+
+    const avgMin = salaryRanges.reduce((sum, range) => sum + range.min, 0) / (salaryRanges.length || 1)
+    const avgMax = salaryRanges.reduce((sum, range) => sum + range.max, 0) / (salaryRanges.length || 1)
+    // Skills match not available from API - using placeholder
+    const avgSkillsMatch = 0
 
     return { avgMin, avgMax, avgSkillsMatch, totalListings: myCareersFutureJobListings.length }
   }
@@ -350,6 +419,7 @@ export default function DynamicJobPricingPage() {
             yearsOfExperienceMin: extractedData.experience_required ? parseInt(extractedData.experience_required) : undefined,
             employmentType: extractedData.employment_type || "",
             jobFamily: extractedData.job_family || "",
+            industry: extractedData.industry || "",
             portfolio: extractedData.portfolio || "",
             uploadedFiles: [file],  // Replace with new file only
             // Clear other fields that aren't extracted from document
@@ -358,6 +428,7 @@ export default function DynamicJobPricingPage() {
             alternativeTitles: [],
             mercerJobCode: "",
             mercerJobDescription: "",
+            mercerMatches: [],
           }
 
           setJobData(newJobData)
@@ -411,6 +482,7 @@ export default function DynamicJobPricingPage() {
                 ...dataWithAlternatives,
                 mercerJobCode: mercerResponse.mercer_job_code,
                 mercerJobDescription: mercerResponse.mercer_job_description,
+                mercerMatches: mercerResponse.matches || [],
               })
 
               console.log('[AUTO-AI] ✅ All automatic AI generation complete!')
@@ -462,13 +534,21 @@ export default function DynamicJobPricingPage() {
     setApiError(null)
 
     try {
+      // Normalize job_family to short code (max 10 chars) before sending to API
+      const normalizedJobFamily = normalizeJobFamily(jobData.jobFamily)
+
+      // Normalize career_level (remove empty strings)
+      const normalizedCareerLevel = jobData.internalGrade && jobData.internalGrade.trim() !== ''
+        ? jobData.internalGrade
+        : undefined
+
       // Call new salary recommendation API
       const response = await salaryRecommendationApi.recommendSalary({
         job_title: jobData.jobTitle || "",
         job_description: jobData.jobSummary || "",
         location: jobData.location || "",
-        job_family: jobData.jobFamily || undefined,
-        career_level: jobData.internalGrade || undefined,
+        job_family: normalizedJobFamily,
+        career_level: normalizedCareerLevel,
       })
 
       // Map API response to UI's expected format
@@ -605,6 +685,7 @@ export default function DynamicJobPricingPage() {
         ...jobData,
         mercerJobCode: response.mercer_job_code,
         mercerJobDescription: response.mercer_job_description,
+        mercerMatches: response.matches || [],
       })
     } catch (error: any) {
       console.error("Failed to map Mercer code:", error)
@@ -1271,17 +1352,121 @@ export default function DynamicJobPricingPage() {
                     </Button>
                   </div>
 
-                  {jobData.mercerJobCode ? (
+                  {jobData.mercerJobCode && jobData.mercerMatches && jobData.mercerMatches.length > 0 ? (
                     <div className="space-y-3">
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <Text size="sm" weight="semibold" className="text-blue-800">
-                          {jobData.mercerJobCode}
+                      {/* Expand/Collapse All Button */}
+                      <div className="flex items-center justify-between">
+                        <Text size="sm" weight="medium" className="text-gray-700">
+                          Top {jobData.mercerMatches.length} Matches
                         </Text>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (expandedMercerCards.size === jobData.mercerMatches!.length) {
+                              setExpandedMercerCards(new Set())
+                            } else {
+                              setExpandedMercerCards(new Set(jobData.mercerMatches!.map((_, i) => i)))
+                            }
+                          }}
+                          className="h-6 text-xs"
+                        >
+                          {expandedMercerCards.size === jobData.mercerMatches.length ? (
+                            <>
+                              <ChevronUp className="h-3 w-3 mr-1" />
+                              Collapse All
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-3 w-3 mr-1" />
+                              Expand All
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <div className="p-3 border rounded-lg">
-                        <Text size="sm" className="whitespace-pre-line">
-                          {jobData.mercerJobDescription}
-                        </Text>
+
+                      {/* All Matches as Cards */}
+                      <div className="space-y-2">
+                        {jobData.mercerMatches.map((match, index) => {
+                          const isExpanded = expandedMercerCards.has(index)
+                          const isBestMatch = index === 0
+
+                          return (
+                            <div
+                              key={match.mercer_job_code}
+                              className={`border rounded-lg overflow-hidden transition-all ${
+                                isBestMatch ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'
+                              }`}
+                            >
+                              {/* Card Header - Clickable */}
+                              <button
+                                onClick={() => {
+                                  const newExpanded = new Set(expandedMercerCards)
+                                  if (isExpanded) {
+                                    newExpanded.delete(index)
+                                  } else {
+                                    newExpanded.add(index)
+                                  }
+                                  setExpandedMercerCards(newExpanded)
+                                }}
+                                className="w-full p-3 flex items-center justify-between hover:bg-opacity-80 transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  {isBestMatch && (
+                                    <div className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded">
+                                      BEST
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <Text size="sm" weight="semibold" className={isBestMatch ? "text-blue-800" : "text-gray-800"}>
+                                      {match.mercer_job_code}
+                                    </Text>
+                                    <Text size="xs" className="text-gray-500">
+                                      {Math.round(match.similarity_score * 100)}% match
+                                    </Text>
+                                  </div>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp className="h-4 w-4 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                                )}
+                              </button>
+
+                              {/* Card Body - Expandable */}
+                              {isExpanded && (
+                                <div className="px-3 pb-3 space-y-2 border-t">
+                                  <div className="pt-2">
+                                    <Text size="xs" weight="medium" className="text-gray-500 mb-1">
+                                      Job Title
+                                    </Text>
+                                    <Text size="sm" weight="medium" className="text-gray-800">
+                                      {match.mercer_job_title}
+                                    </Text>
+                                  </div>
+                                  <div>
+                                    <Text size="xs" weight="medium" className="text-gray-500 mb-1">
+                                      Description
+                                    </Text>
+                                    <Text size="sm" className="text-gray-700 whitespace-pre-line">
+                                      {match.mercer_job_description}
+                                    </Text>
+                                  </div>
+                                  {match.job_family && (
+                                    <div>
+                                      <Text size="xs" weight="medium" className="text-gray-500 mb-1">
+                                        Job Family
+                                      </Text>
+                                      <Text size="sm" className="text-gray-700">
+                                        {match.job_family}
+                                      </Text>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   ) : (
@@ -1717,7 +1902,7 @@ export default function DynamicJobPricingPage() {
                                   Number.parseInt(range[1].replace(",", ""))) /
                                   2
                               )
-                            }, 0) / glassdoorJobListings.length,
+                            }, 0) / (glassdoorJobListings.length || 1),
                           ).toLocaleString()}
                         </Text>
                       </div>
@@ -1857,7 +2042,7 @@ export default function DynamicJobPricingPage() {
                         <div>
                           • <strong>Average Company Rating:</strong>{" "}
                           {(
-                            glassdoorJobListings.reduce((sum, job) => sum + job.companyRating, 0) /
+                            glassdoorJobListings.reduce((sum, job) => sum + job.rating, 0) /
                             glassdoorJobListings.length
                           ).toFixed(1)}
                           /5.0 across Total Rewards employers
@@ -1918,7 +2103,7 @@ export default function DynamicJobPricingPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {internalHRISData.map((emp, index) => (
+                          {transformedInternalHRISData.map((emp, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{emp.name}</td>
                               <td className="border border-gray-200 px-4 py-3 text-gray-700">{emp.dept}</td>
@@ -1975,7 +2160,7 @@ export default function DynamicJobPricingPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {internalHRISData.map((emp, index) => (
+                            {transformedInternalHRISData.map((emp, index) => (
                               <tr key={index} className="hover:bg-gray-50">
                                 <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">
                                   {emp.name}
@@ -2058,7 +2243,7 @@ export default function DynamicJobPricingPage() {
                         <Text size="sm" weight="semibold" className="text-blue-700">
                           SGD{" "}
                           {Math.round(
-                            externalApplicants.reduce((sum, app) => sum + Number.parseInt(app.expectedSalary) * 12, 0) /
+                            externalApplicants.reduce((sum, app) => sum + (app.expectedSalary || 0) * 12, 0) /
                               externalApplicants.length,
                           ).toLocaleString()}
                         </Text>
@@ -2077,7 +2262,7 @@ export default function DynamicJobPricingPage() {
                         </Text>
                         <Text size="sm" weight="semibold">
                           {Math.round(
-                            externalApplicants.reduce((sum, app) => sum + Number.parseInt(app.experience), 0) /
+                            externalApplicants.reduce((sum, app) => sum + (app.experience || 0), 0) /
                               externalApplicants.length,
                           )}{" "}
                           years
@@ -2091,13 +2276,13 @@ export default function DynamicJobPricingPage() {
                           +
                           {Math.round(
                             externalApplicants.reduce(
-                              (sum, app) =>
-                                sum +
-                                ((Number.parseInt(app.expectedSalary) - Number.parseInt(app.currentSalary)) /
-                                  Number.parseInt(app.currentSalary)) *
-                                  100,
+                              (sum, app) => {
+                                const current = app.currentSalary || 0
+                                const expected = app.expectedSalary || 0
+                                return current > 0 ? sum + ((expected - current) / current) * 100 : sum
+                              },
                               0,
-                            ) / externalApplicants.length,
+                            ) / (externalApplicants.length || 1),
                           )}
                           %
                         </Text>
@@ -2144,7 +2329,7 @@ export default function DynamicJobPricingPage() {
                                 Current Annual Salary
                               </Text>
                               <Text size="sm" weight="semibold">
-                                SGD {(Number.parseInt(applicant.currentSalary) * 12).toLocaleString()}
+                                SGD {((applicant.currentSalary || 0) * 12).toLocaleString()}
                               </Text>
                             </div>
                             <div className="p-3 bg-green-50 rounded-lg border border-green-200">
@@ -2152,7 +2337,7 @@ export default function DynamicJobPricingPage() {
                                 Expected Annual Salary
                               </Text>
                               <Text size="sm" weight="semibold" className="text-green-700">
-                                SGD {(Number.parseInt(applicant.expectedSalary) * 12).toLocaleString()}
+                                SGD {((applicant.expectedSalary || 0) * 12).toLocaleString()}
                               </Text>
                             </div>
                             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -2161,12 +2346,11 @@ export default function DynamicJobPricingPage() {
                               </Text>
                               <Text size="sm" weight="semibold" className="text-blue-700">
                                 +
-                                {Math.round(
-                                  ((Number.parseInt(applicant.expectedSalary) -
-                                    Number.parseInt(applicant.currentSalary)) /
-                                    Number.parseInt(applicant.currentSalary)) *
-                                    100,
-                                )}
+                                {(() => {
+                                  const current = applicant.currentSalary || 0
+                                  const expected = applicant.expectedSalary || 0
+                                  return current > 0 ? Math.round(((expected - current) / current) * 100) : 0
+                                })()}
                                 %
                               </Text>
                             </div>
@@ -2204,28 +2388,29 @@ export default function DynamicJobPricingPage() {
                             • <strong>Average Expectation:</strong>{" "}
                             {Math.round(
                               externalApplicants.reduce(
-                                (sum, app) =>
-                                  sum +
-                                  ((Number.parseInt(app.expectedSalary) - Number.parseInt(app.currentSalary)) /
-                                    Number.parseInt(app.currentSalary)) *
-                                    100,
+                                (sum, app) => {
+                                  const current = app.currentSalary || 0
+                                  const expected = app.expectedSalary || 0
+                                  return current > 0 ? sum + ((expected - current) / current) * 100 : sum
+                                },
                                 0,
-                              ) / externalApplicants.length,
+                              ) / (externalApplicants.length || 1),
                             )}
                             % increase over current salary
                           </div>
                           <div>
                             • <strong>Top Source:</strong>{" "}
                             {externalApplicants.reduce((acc, app) => {
+                              const org = app.organisation || ""
                               const sector =
-                                app.organisation.includes("Property") || app.organisation.includes("Land")
+                                org.includes("Property") || org.includes("Land")
                                   ? "Property"
-                                  : app.organisation.includes("Shangri-La") || app.organisation.includes("Marina")
+                                  : org.includes("Shangri-La") || org.includes("Marina")
                                     ? "Hospitality"
                                     : "Other"
                               acc[sector] = (acc[sector] || 0) + 1
                               return acc
-                            }, {} as any).Property > 1
+                            }, {} as Record<string, number>).Property > 1
                               ? "Property sector"
                               : "Hospitality sector"}{" "}
                             provides most candidates
@@ -2243,11 +2428,11 @@ export default function DynamicJobPricingPage() {
                             {Math.round(
                               70 +
                                 externalApplicants.reduce(
-                                  (sum, app) =>
-                                    sum +
-                                    ((Number.parseInt(app.expectedSalary) - Number.parseInt(app.currentSalary)) /
-                                      Number.parseInt(app.currentSalary)) *
-                                      100,
+                                  (sum, app) => {
+                                    const current = app.currentSalary || 0
+                                    const expected = app.expectedSalary || 0
+                                    return current > 0 ? sum + ((expected - current) / current) * 100 : sum
+                                  },
                                   0,
                                 ) /
                                   externalApplicants.length /
@@ -2680,7 +2865,7 @@ export default function DynamicJobPricingPage() {
                                   Number.parseInt(range[1].replace(",", ""))) /
                                   2
                               )
-                            }, 0) / glassdoorJobListings.length,
+                            }, 0) / (glassdoorJobListings.length || 1),
                           ).toLocaleString()}
                         </Text>
                       </div>
@@ -2820,420 +3005,10 @@ export default function DynamicJobPricingPage() {
                         <div>
                           • <strong>Average Company Rating:</strong>{" "}
                           {(
-                            glassdoorJobListings.reduce((sum, job) => sum + job.companyRating, 0) /
+                            glassdoorJobListings.reduce((sum, job) => sum + job.rating, 0) /
                             glassdoorJobListings.length
                           ).toFixed(1)}
                           /5.0 across Total Rewards employers
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Internal TPC Group Benchmarking with Asian Names */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Internal TPC Group Benchmarking
-                  </CardTitle>
-                  <CardDescription>
-                    Internal compensation data across TPC Group entities with performance correlation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <Alert>
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Data Source:</strong> Internal HRIS data for TPC Group employees, filtered by job family
-                        and grade.
-                      </AlertDescription>
-                    </Alert>
-
-                    {/* Internal Data Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm border-collapse border border-gray-200">
-                        <thead>
-                          <tr className="bg-gray-50">
-                            <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">
-                              Name
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">
-                              Department
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                              Title
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                              Grade
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                              Monthly Salary
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                              Annual Cash
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                              Performance (2024)
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {internalHRISData.map((emp, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{emp.name}</td>
-                              <td className="border border-gray-200 px-4 py-3 text-gray-700">{emp.dept}</td>
-                              <td className="border border-gray-200 px-4 py-3 text-center text-gray-700">
-                                {emp.title}
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-center font-semibold">
-                                {emp.grade}
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-center font-semibold text-blue-700">
-                                SGD {emp.monthlySalary.toLocaleString()}
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-center font-semibold text-green-700">
-                                SGD {emp.annualCash.toLocaleString()}
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-center">
-                                <Badge variant="outline" className="text-xs">
-                                  {emp.performance}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Other Departments Data */}
-                    <div className="mt-6">
-                      <Text size="lg" weight="semibold" className="mb-3">
-                        Benchmarking with Other Departments (Same Grade)
-                      </Text>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm border-collapse border border-gray-200">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">
-                                Name
-                              </th>
-                              <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">
-                                Department
-                              </th>
-                              <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                                Title
-                              </th>
-                              <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                                Grade
-                              </th>
-                              <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                                Monthly Salary
-                              </th>
-                              <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                                Annual Cash
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {internalHRISData.map((emp, index) => (
-                              <tr key={index} className="hover:bg-gray-50">
-                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">
-                                  {emp.name}
-                                </td>
-                                <td className="border border-gray-200 px-4 py-3 text-gray-700">{emp.dept}</td>
-                                <td className="border border-gray-200 px-4 py-3 text-center text-gray-700">
-                                  {emp.title}
-                                </td>
-                                <td className="border border-gray-200 px-4 py-3 text-center font-semibold">
-                                  {emp.grade}
-                                </td>
-                                <td className="border border-gray-200 px-4 py-3 text-center font-semibold text-blue-700">
-                                  SGD {emp.monthlySalary.toLocaleString()}
-                                </td>
-                                <td className="border border-gray-200 px-4 py-3 text-center font-semibold text-green-700">
-                                  SGD {emp.annualCash.toLocaleString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <Text size="sm" weight="semibold" className="text-blue-800 mb-2">
-                        Internal Benchmarking Insights
-                      </Text>
-                      <div className="space-y-2 text-sm text-blue-700">
-                        {internalHRISDisabled ? (
-                          <div className="text-gray-500 italic">
-                            • Internal salary data unavailable (HRIS integration disabled)
-                          </div>
-                        ) : internalHRISData.length > 0 ? (
-                          <>
-                            <div>
-                              • <strong>Internal Team:</strong> Current employees earn SGD{" "}
-                              {Math.min(...internalHRISData.map(e => e.current_salary)).toLocaleString()} -{" "}
-                              {Math.max(...internalHRISData.map(e => e.current_salary)).toLocaleString()}
-                              monthly, aligning with market benchmarks.
-                            </div>
-                            <div>
-                              • <strong>Department Comparison:</strong> Similar roles across departments show comparable salary ranges.
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-gray-500 italic">
-                            • No internal salary data available for this role
-                          </div>
-                        )}
-                        <div>
-                          • <strong>Performance Correlation:</strong> High performers (A+, A) generally receive higher
-                          compensation within their grade bands.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* External Applicant Intelligence with Asian Names */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    External Applicant Intelligence
-                  </CardTitle>
-                  <CardDescription>
-                    Analysis of recent applicants for Total Rewards roles with salary expectations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* Summary Statistics from actual applicant data */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <Text size="xs" color="muted" className="mb-1">
-                          Avg Expected Salary
-                        </Text>
-                        <Text size="sm" weight="semibold" className="text-blue-700">
-                          SGD{" "}
-                          {Math.round(
-                            externalApplicants.reduce((sum, app) => sum + Number.parseInt(app.expectedSalary) * 12, 0) /
-                              externalApplicants.length,
-                          ).toLocaleString()}
-                        </Text>
-                      </div>
-                      <div className="text-center p-3 bg-slate-50 rounded-lg">
-                        <Text size="xs" color="muted" className="mb-1">
-                          Total Applicants
-                        </Text>
-                        <Text size="sm" weight="semibold">
-                          {externalApplicants.length} candidates
-                        </Text>
-                      </div>
-                      <div className="text-center p-3 bg-slate-50 rounded-lg">
-                        <Text size="xs" color="muted" className="mb-1">
-                          Avg Experience
-                        </Text>
-                        <Text size="sm" weight="semibold">
-                          {Math.round(
-                            externalApplicants.reduce((sum, app) => sum + Number.parseInt(app.experience), 0) /
-                              externalApplicants.length,
-                          )}{" "}
-                          years
-                        </Text>
-                      </div>
-                      <div className="text-center p-3 bg-slate-50 rounded-lg">
-                        <Text size="xs" color="muted" className="mb-1">
-                          Salary Premium
-                        </Text>
-                        <Text size="sm" weight="semibold">
-                          +
-                          {Math.round(
-                            externalApplicants.reduce(
-                              (sum, app) =>
-                                sum +
-                                ((Number.parseInt(app.expectedSalary) - Number.parseInt(app.currentSalary)) /
-                                  Number.parseInt(app.currentSalary)) *
-                                  100,
-                              0,
-                            ) / externalApplicants.length,
-                          )}
-                          %
-                        </Text>
-                      </div>
-                    </div>
-
-                    {/* Applicant Details */}
-                    <div className="space-y-4">
-                      {externalApplicants.map((applicant, index) => (
-                        <div key={index} className="p-4 border rounded-lg hover:shadow-sm transition-shadow">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <Text size="sm" weight="semibold" className="text-slate-900">
-                                  {applicant.name}
-                                </Text>
-                                <Badge
-                                  variant={
-                                    applicant.status === "Hired"
-                                      ? "default"
-                                      : applicant.status === "Offer Extended"
-                                        ? "secondary"
-                                        : applicant.status === "Declined Offer"
-                                          ? "destructive"
-                                          : "outline"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {applicant.status}
-                                </Badge>
-                              </div>
-                              <Text size="xs" color="muted" className="mb-3">
-                                {applicant.title} at {applicant.organisation} • {applicant.experience} years experience
-                              </Text>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {applicant.year}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div className="p-3 bg-slate-50 rounded-lg">
-                              <Text size="xs" color="muted" className="mb-1">
-                                Current Annual Salary
-                              </Text>
-                              <Text size="sm" weight="semibold">
-                                SGD {(Number.parseInt(applicant.currentSalary) * 12).toLocaleString()}
-                              </Text>
-                            </div>
-                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                              <Text size="xs" color="muted" className="mb-1">
-                                Expected Annual Salary
-                              </Text>
-                              <Text size="sm" weight="semibold" className="text-green-700">
-                                SGD {(Number.parseInt(applicant.expectedSalary) * 12).toLocaleString()}
-                              </Text>
-                            </div>
-                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <Text size="xs" color="muted" className="mb-1">
-                                Salary Increase
-                              </Text>
-                              <Text size="sm" weight="semibold" className="text-blue-700">
-                                +
-                                {Math.round(
-                                  ((Number.parseInt(applicant.expectedSalary) -
-                                    Number.parseInt(applicant.currentSalary)) /
-                                    Number.parseInt(applicant.currentSalary)) *
-                                    100,
-                                )}
-                                %
-                              </Text>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Text size="xs" className="text-slate-600">
-                              <span className="font-medium">Organization:</span> {applicant.orgSummary}
-                            </Text>
-                            <Text size="xs" className="text-slate-700">
-                              <span className="font-medium">Role Scope:</span> {applicant.roleScope}
-                            </Text>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Data-Driven Insights */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                        <Text size="sm" weight="semibold" className="text-orange-800 mb-3">
-                          Recruitment Intelligence
-                        </Text>
-                        <div className="space-y-2 text-sm text-orange-700">
-                          <div>
-                            • <strong>Success Rate:</strong>{" "}
-                            {Math.round(
-                              (externalApplicants.filter((app) => app.status === "Hired").length /
-                                externalApplicants.length) *
-                                100,
-                            )}
-                            % of candidates hired
-                          </div>
-                          <div>
-                            • <strong>Average Expectation:</strong>{" "}
-                            {Math.round(
-                              externalApplicants.reduce(
-                                (sum, app) =>
-                                  sum +
-                                  ((Number.parseInt(app.expectedSalary) - Number.parseInt(app.currentSalary)) /
-                                    Number.parseInt(app.currentSalary)) *
-                                    100,
-                                0,
-                              ) / externalApplicants.length,
-                            )}
-                            % increase over current salary
-                          </div>
-                          <div>
-                            • <strong>Top Source:</strong>{" "}
-                            {externalApplicants.reduce((acc, app) => {
-                              const sector =
-                                app.organisation.includes("Property") || app.organisation.includes("Land")
-                                  ? "Property"
-                                  : app.organisation.includes("Shangri-La") || app.organisation.includes("Marina")
-                                    ? "Hospitality"
-                                    : "Other"
-                              acc[sector] = (acc[sector] || 0) + 1
-                              return acc
-                            }, {} as any).Property > 1
-                              ? "Property sector"
-                              : "Hospitality sector"}{" "}
-                            provides most candidates
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                        <Text size="sm" weight="semibold" className="text-purple-800 mb-3">
-                          Strategic Recommendations
-                        </Text>
-                        <div className="space-y-2 text-sm text-purple-700">
-                          <div>
-                            • <strong>Offer Strategy:</strong> Position at P
-                            {Math.round(
-                              70 +
-                                externalApplicants.reduce(
-                                  (sum, app) =>
-                                    sum +
-                                    ((Number.parseInt(app.expectedSalary) - Number.parseInt(app.currentSalary)) /
-                                      Number.parseInt(app.currentSalary)) *
-                                      100,
-                                  0,
-                                ) /
-                                  externalApplicants.length /
-                                  10,
-                            )}{" "}
-                            based on expectations
-                          </div>
-                          <div>
-                            • <strong>Competition:</strong>{" "}
-                            {externalApplicants.filter((app) => app.status === "Declined Offer").length > 0
-                              ? "High competition"
-                              : "Moderate competition"}{" "}
-                            from market
-                          </div>
-                          <div>
-                            • <strong>Speed Factor:</strong> Fast decision process critical for{" "}
-                            {Math.round(
-                              (externalApplicants.filter((app) => app.status.includes("Interview")).length /
-                                externalApplicants.length) *
-                                100,
-                            )}
-                            % in interview process
-                          </div>
                         </div>
                       </div>
                     </div>
