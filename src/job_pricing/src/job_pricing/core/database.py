@@ -69,9 +69,12 @@ def get_session():
             user = session.query(User).first()
             # Session automatically closed after endpoint returns
 
-    Usage (manual):
-        with next(get_session()) as session:
+    Usage (manual - for Celery tasks or scripts):
+        session = next(get_session())
+        try:
             user = session.query(User).first()
+        finally:
+            session.close()
     """
     session = SessionLocal()
     try:

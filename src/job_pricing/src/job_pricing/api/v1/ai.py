@@ -503,6 +503,7 @@ Job Title: {data.job_title}
 async def map_mercer_code(
     request: Request,
     data: MercerMappingRequest,
+    db: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     """
@@ -527,10 +528,7 @@ async def map_mercer_code(
     # ✅ USE REAL SEMANTIC SEARCH AGAINST MERCER DATABASE
     # Instead of having AI guess codes, use the same semantic search as salary recommendation
     from job_pricing.services.job_matching_service import JobMatchingService
-    from job_pricing.core.database import get_session
     from job_pricing.models.mercer import MercerJobLibrary
-
-    db = next(get_session())
 
     try:
         # Use JobMatchingService for semantic search against Mercer database
@@ -642,9 +640,6 @@ async def map_mercer_code(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to map to Mercer job code: {str(e)}"
         )
-    finally:
-        if db:
-            db.close()
 
 
 @router.post(

@@ -198,7 +198,7 @@ Remember to return ONLY the JSON object, no other text."""
 
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse AI response as JSON: {e}")
-        logger.error(f"AI Response: {response}")
+        logger.error(f"AI Response: {ai_response}")
         raise ValueError("AI returned invalid JSON response")
     except Exception as e:
         logger.error(f"Error in AI extraction: {e}")
