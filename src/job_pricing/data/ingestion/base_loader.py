@@ -357,8 +357,8 @@ class BaseDataLoader(Generic[ModelType]):
         Args:
             validation_result: Validation result with errors
         """
-        # TODO: Implement error logging to database
-        # Will be implemented when DataIngestionError model is created
+        # NOTE: Errors logged to application logger. Database error logging
+        # can be added when DataIngestionError model is created.
         for error in validation_result.errors:
             logger.warning(
                 f"Validation error - Record: {validation_result.record_id}, "
@@ -380,8 +380,8 @@ class BaseDataLoader(Generic[ModelType]):
             raw_data: Original raw data
             exception: Exception that occurred
         """
-        # TODO: Implement error logging to database
-        # Will be implemented when DataIngestionError model is created
+        # NOTE: Errors logged to application logger. Database error logging
+        # can be added when DataIngestionError model is created.
         logger.error(
             f"Database error - Record: {record_id}, "
             f"Exception: {type(exception).__name__}, "

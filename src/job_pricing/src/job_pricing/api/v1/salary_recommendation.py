@@ -200,7 +200,8 @@ async def recommend_salary(
             location=request.location or "Singapore",
             user_id=current_user.id,
             job_description=request.job_description or "",
-            force_refresh=force_refresh
+            force_refresh=force_refresh,
+            user_email=current_user.email
         )
 
         # Build response from V2 result format

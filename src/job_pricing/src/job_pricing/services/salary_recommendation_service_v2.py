@@ -102,7 +102,8 @@ class SalaryRecommendationServiceV2:
         job_title: str,
         location: str,
         user_id: int,
-        job_description: str = ""
+        job_description: str = "",
+        user_email: Optional[str] = None
     ) -> JobPricingRequest:
         """
         Find existing request by hash or create new one.
@@ -116,6 +117,7 @@ class SalaryRecommendationServiceV2:
             location: Location
             user_id: User ID
             job_description: Optional job description
+            user_email: User's email address for audit trail (from authenticated user)
 
         Returns:
             Existing or newly created JobPricingRequest
@@ -143,7 +145,7 @@ class SalaryRecommendationServiceV2:
             location_text=location,
             job_description=job_description or "",
             requested_by=str(user_id),  # Convert to string for DB field
-            requestor_email=f"user_{user_id}@system.local",  # Placeholder
+            requestor_email=user_email or f"user_{user_id}@system.internal",  # Use real email if provided
             request_count=1,
             first_requested_at=datetime.now(timezone.utc),
             last_requested_at=datetime.now(timezone.utc),
@@ -256,7 +258,8 @@ class SalaryRecommendationServiceV2:
         location: str,
         user_id: int,
         job_description: str = "",
-        force_refresh: bool = False
+        force_refresh: bool = False,
+        user_email: Optional[str] = None
     ) -> Dict:
         """
         Calculate comprehensive salary recommendation with smart caching.
@@ -276,6 +279,7 @@ class SalaryRecommendationServiceV2:
             user_id: User ID making the request
             job_description: Optional job description
             force_refresh: If True, bypass cache and recalculate
+            user_email: User's email address for audit trail (from authenticated user)
 
         Returns:
             Dictionary with recommendation details, percentiles, confidence, and cache metadata
@@ -303,7 +307,8 @@ class SalaryRecommendationServiceV2:
                 job_title=job_title,
                 location=location,
                 user_id=user_id,
-                job_description=job_description
+                job_description=job_description,
+                user_email=user_email
             )
 
             # Step 3: Check cache for non-expired result (unless force_refresh)

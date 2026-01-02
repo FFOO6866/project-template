@@ -111,24 +111,33 @@ def load_market_data():
                             # Still load but log the warning
                             break
 
-                # Get survey date
+                # Get survey date - REQUIRED, no default
                 survey_date = row.get('DataEffectiveDate')
                 if isinstance(survey_date, str):
                     try:
                         survey_date = datetime.strptime(survey_date, '%Y-%m-%d').date()
-                    except:
-                        survey_date = date(2024, 1, 1)  # Default
+                    except ValueError:
+                        print(f"SKIPPING {job_code}: Invalid date format '{survey_date}'")
+                        skipped_count += 1
+                        continue
                 elif isinstance(survey_date, datetime):
                     survey_date = survey_date.date()
+                elif pd.isna(survey_date):
+                    print(f"SKIPPING {job_code}: Missing survey date (DataEffectiveDate is required)")
+                    skipped_count += 1
+                    continue
                 else:
-                    survey_date = date(2024, 1, 1)
+                    print(f"SKIPPING {job_code}: Invalid survey date type {type(survey_date)}")
+                    skipped_count += 1
+                    continue
 
-                # Get sample size
+                # Get sample size - REQUIRED, no default
                 sample_size = pd.to_numeric(row.get('BaseAnnual_NumObs'), errors='coerce')
                 if pd.isna(sample_size):
-                    sample_size = 5  # Default
-                else:
-                    sample_size = int(sample_size)
+                    print(f"SKIPPING {job_code}: Missing sample size (BaseAnnual_NumObs is required)")
+                    skipped_count += 1
+                    continue
+                sample_size = int(sample_size)
 
                 # Create or update market data record
                 # Match on unique constraint: job_code + country_code + benchmark_cut + survey_date

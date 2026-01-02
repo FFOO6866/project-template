@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from job_pricing.core.database import get_session
 from job_pricing.models.auth import User, Permission, AuditLog
 from job_pricing.utils.auth import decode_token
+from job_pricing.exceptions import AuthenticationException, AuthorizationException
 
 # HTTP Bearer security scheme
 security = HTTPBearer()
@@ -70,10 +71,7 @@ async def get_current_user(
 
         # Check if user is active
         if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is inactive"
-            )
+            raise AuthorizationException("User account is inactive")
 
         # Update last login timestamp
         user.last_login = datetime.now(timezone.utc)
@@ -101,10 +99,7 @@ async def get_current_active_user(
         HTTPException: If user is not active
     """
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
+        raise AuthorizationException("Inactive user")
     return current_user
 
 
@@ -179,10 +174,7 @@ async def get_current_verified_user(
         HTTPException: If user is not verified
     """
     if not current_user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please verify your email to access this resource."
-        )
+        raise AuthorizationException("Email not verified. Please verify your email to access this resource.")
     return current_user
 
 
@@ -202,10 +194,7 @@ async def get_current_superuser(
         HTTPException: If user is not a superuser
     """
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions. Superuser access required."
-        )
+        raise AuthorizationException("Not enough permissions. Superuser access required.")
     return current_user
 
 
@@ -249,9 +238,8 @@ class PermissionChecker:
             has_permission = current_user.has_any_permission(self.required_permissions)
 
         if not has_permission:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Not enough permissions. Required: {[p.value for p in self.required_permissions]}"
+            raise AuthorizationException(
+                f"Not enough permissions. Required: {[p.value for p in self.required_permissions]}"
             )
 
         return current_user
@@ -290,9 +278,8 @@ class RoleChecker:
             HTTPException: If user doesn't have required role
         """
         if current_user.role not in self.allowed_roles and not current_user.is_superuser:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Not enough permissions. Required role: one of {self.allowed_roles}"
+            raise AuthorizationException(
+                f"Not enough permissions. Required role: one of {self.allowed_roles}"
             )
 
         return current_user

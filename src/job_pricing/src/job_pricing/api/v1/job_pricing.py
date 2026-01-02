@@ -24,6 +24,11 @@ from job_pricing.schemas.job_pricing import (
     JobPricingStatusResponse,
     ErrorResponse,
 )
+from job_pricing.exceptions import (
+    DataValidationException,
+    ResourceNotFoundException,
+    JobPricingException,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,28 +161,14 @@ async def create_job_pricing_request(
     except ValueError as e:
         logger.error(f"Validation error creating job pricing request: {e}")
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "VALIDATION_ERROR",
-                "message": "Invalid request data",
-                "details": str(e),
-            },
-        )
+        raise DataValidationException("request_data", str(e))
     except Exception as e:
         logger.error(
             f"Failed to create job pricing request: {e}",
             exc_info=True
         )
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "code": "CREATE_FAILED",
-                "message": "Failed to create job pricing request",
-                "details": "An internal error occurred",
-            },
-        )
+        raise JobPricingException(f"Failed to create job pricing request: {e}")
 
 
 @router.get(
@@ -219,14 +210,7 @@ async def get_request_status(
     request = repository.get_by_id(request_id)
 
     if not request:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "NOT_FOUND",
-                "message": "Job pricing request not found",
-                "details": f"No request found with ID: {request_id}",
-            },
-        )
+        raise ResourceNotFoundException("JobPricingRequest", str(request_id))
 
     return JobPricingStatusResponse(
         id=request.id,
@@ -281,16 +265,9 @@ async def get_pricing_results(
     request = repository.get_with_full_details(request_id)
 
     if not request:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "NOT_FOUND",
-                "message": "Job pricing request not found",
-                "details": f"No request found with ID: {request_id}",
-            },
-        )
+        raise ResourceNotFoundException("JobPricingRequest", str(request_id))
 
-    # Check if processing is complete
+    # Check if processing is complete - Keep HTTPException for 425 (non-standard status)
     if request.status == "pending":
         raise HTTPException(
             status_code=status.HTTP_425_TOO_EARLY,

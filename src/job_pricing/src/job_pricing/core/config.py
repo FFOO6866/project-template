@@ -136,6 +136,16 @@ class Settings(BaseSettings):
     SCRAPING_SCHEDULE_DAILY: str = Field(default="0 6 * * *")  # Daily 6AM
 
     # --------------------------------------------------------------------------
+    # Web Scraping
+    # --------------------------------------------------------------------------
+    SCRAPER_USER_AGENT: str = Field(
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        description="User-Agent header for web scraping requests"
+    )
+    SCRAPER_REQUEST_TIMEOUT: int = Field(default=15, description="Request timeout in seconds")
+    SCRAPER_RATE_LIMIT_DELAY: float = Field(default=0.5, description="Delay between requests in seconds")
+
+    # --------------------------------------------------------------------------
     # File Storage
     # --------------------------------------------------------------------------
     UPLOAD_DIR: str = Field(default="/app/data/uploads")

@@ -407,7 +407,7 @@ def _generate_text_report(metrics: Dict[str, Any]) -> str:
 
 def _generate_html_report(metrics: Dict[str, Any]) -> str:
     """Generate HTML-formatted quality report."""
-    # TODO: Implement HTML report generation
-    # For now, return text report wrapped in <pre> tags
+    # NOTE: Basic HTML implementation using preformatted text.
+    # Enhanced HTML styling can be added as needed.
     text_report = _generate_text_report(metrics)
     return f"<pre>{text_report}</pre>"

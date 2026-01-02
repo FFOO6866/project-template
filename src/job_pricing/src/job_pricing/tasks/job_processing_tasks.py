@@ -28,7 +28,7 @@ def process_job_pricing_request(self, request_id: str):
     This task:
     1. Extracts skills from job description using OpenAI
     2. Matches skills to SSG TSC taxonomy
-    3. Calculates salary pricing (placeholder)
+    3. Calculates salary pricing using V3 multi-source aggregation
     4. Saves results to database
 
     Args:

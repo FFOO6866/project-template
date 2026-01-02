@@ -75,13 +75,13 @@ class AppConfig:
         return cls()
     
     def get_database_url(self) -> str:
-        """Get database URL with fallback for development."""
-        if self.database_url:
-            return self.database_url
-        
-        # Development fallback
-        app_name_safe = self.app_name.replace("-", "_").replace(" ", "_")
-        return f"sqlite:///data/outputs/{app_name_safe}.db"
+        """Get database URL - REQUIRED, no fallback."""
+        if not self.database_url:
+            raise ValueError(
+                "DATABASE_URL environment variable is required. "
+                "No fallback database URL is permitted in production."
+            )
+        return self.database_url
     
     def get_api_url(self) -> str:
         """Get full API URL."""

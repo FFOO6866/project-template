@@ -77,12 +77,8 @@ class BaseScraper(ABC):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
 
-        # User agent rotation (reduce bot detection)
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
+        # User agent from config (configurable for anti-bot rotation)
+        chrome_options.add_argument(f"user-agent={settings.SCRAPER_USER_AGENT}")
 
         # Experimental options
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])

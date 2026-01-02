@@ -17,10 +17,12 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from job_pricing.repositories.job_pricing_repository import JobPricingRepository
-from job_pricing.models import JobPricingRequest, JobPricingResult
+from job_pricing.models import JobPricingRequest, JobPricingResult, DataSourceContribution as DBContribution
+from job_pricing.exceptions import NoMarketDataError
 from .skill_extraction_service import SkillExtractionService
 from .skill_matching_service import SkillMatchingService
-from .pricing_calculation_service import PricingCalculationService
+from .pricing_calculation_service_v3 import PricingCalculationServiceV3
+from .job_matching_service import JobMatchingService
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,8 @@ class JobProcessingService:
         self.repository = JobPricingRepository(session)
         self.extraction_service = SkillExtractionService()
         self.matching_service = SkillMatchingService(session)
+        self.job_matching_service = JobMatchingService(session)
+        self.pricing_service = PricingCalculationServiceV3(session)
 
     def process_request(self, request_id: UUID) -> JobPricingRequest:
         """
@@ -104,14 +108,13 @@ class JobProcessingService:
             )
             logger.info(f"[{request_id}] Saved {len(saved_skills)} skills to database")
 
-            # Step 4: Calculate pricing (placeholder for now)
+            # Step 4: Calculate pricing using V3 multi-source aggregation
             logger.info(f"[{request_id}] Step 4: Calculating pricing...")
             pricing_result = self._calculate_pricing(request, skill_matches)
 
-            # Step 5: Save pricing result (if calculated)
+            # Step 5: Commit pricing result and contributions (already added to session in _calculate_pricing)
             if pricing_result:
-                logger.info(f"[{request_id}] Step 5: Saving pricing result...")
-                self.session.add(pricing_result)
+                logger.info(f"[{request_id}] Step 5: Committing pricing result...")
                 self.session.commit()
 
             # Mark as completed
@@ -143,57 +146,121 @@ class JobProcessingService:
         self, request: JobPricingRequest, skill_matches
     ) -> Optional[JobPricingResult]:
         """
-        Calculate salary pricing based on job details and matched skills.
+        Calculate salary pricing using V3 multi-source weighted aggregation.
 
-        Uses PricingCalculationService to:
-        1. Determine base salary from experience level
-        2. Apply experience multiplier
-        3. Apply location cost-of-living adjustments
-        4. Calculate skill premium for high-value skills
-        5. Apply industry and company size factors
-        6. Generate salary bands with percentiles
-        7. Calculate confidence scores
+        Uses PricingCalculationServiceV3 (production-ready) which:
+        1. Finds best Mercer job match using semantic search
+        2. Aggregates data from 5 sources (Mercer, MCF, Glassdoor, HRIS, Applicants)
+        3. Calculates weighted percentiles (P10-P90)
+        4. Generates confidence scores based on data quality
+        5. Returns production-ready salary recommendation
 
         Args:
             request: Job pricing request
-            skill_matches: List of matched skills
+            skill_matches: List of matched skills (used for logging, V3 uses Mercer match)
 
         Returns:
             JobPricingResult or None if pricing cannot be calculated
         """
         try:
-            # Get extracted skills from database
-            from job_pricing.models import JobSkillsExtracted
-            extracted_skills = (
-                self.session.query(JobSkillsExtracted)
-                .filter_by(request_id=request.id)
-                .all()
-            )
-
-            if not extracted_skills:
-                logger.debug(f"    No extracted skills found, using empty list")
-                extracted_skills = []
-
-            # Initialize pricing service
-            pricing_service = PricingCalculationService(self.session)
-
-            # Calculate pricing
             logger.info(f"    Calculating pricing for: {request.job_title}")
             logger.info(f"    - Location: {request.location_text or 'Not specified'}")
-            logger.info(f"    - Experience: {request.years_of_experience_min or 0}-{request.years_of_experience_max or 0} years")
-            logger.info(f"    - Industry: {request.industry or 'General'}")
-            logger.info(f"    - Company size: {request.company_size or 'Not specified'}")
-            logger.info(f"    - Skills: {len(extracted_skills)} extracted, {sum(1 for s in extracted_skills if s.matched_tsc_code)} matched")
+            logger.info(f"    - Using V3 multi-source weighted aggregation")
 
-            pricing_result, pricing_factors = pricing_service.calculate_pricing(
-                request, extracted_skills
+            # Step 1: Find best Mercer job match
+            mercer_match = self.job_matching_service.find_best_match(
+                job_title=request.job_title,
+                job_description=request.job_description or "",
+                use_llm_reasoning=False  # Faster, deterministic matching
             )
 
-            logger.info(f"    Target salary: SGD {pricing_result.target_salary:,.2f}")
-            logger.info(f"    Range: SGD {pricing_result.recommended_min:,.2f} - {pricing_result.recommended_max:,.2f}")
-            logger.info(f"    Confidence: {pricing_result.confidence_level} ({pricing_result.confidence_score}%)")
+            if mercer_match:
+                logger.info(f"    - Mercer match: {mercer_match.get('job_code')} "
+                           f"(similarity: {mercer_match.get('similarity_score', 0):.2%})")
+            else:
+                logger.info(f"    - No Mercer match found, using external sources only")
 
-            return pricing_result
+            # Step 2: Calculate pricing using V3 multi-source aggregation
+            pricing_result = self.pricing_service.calculate_pricing(request, mercer_match)
+
+            # Step 3: Convert PricingResult dataclass to JobPricingResult model
+            # Determine confidence level from score
+            if pricing_result.confidence_score >= 75:
+                confidence_level = 'High'
+            elif pricing_result.confidence_score >= 50:
+                confidence_level = 'Medium'
+            else:
+                confidence_level = 'Low'
+
+            # Convert alternative_scenarios Decimals to floats for JSON storage
+            from decimal import Decimal
+            def decimal_to_float(obj):
+                if isinstance(obj, dict):
+                    return {k: decimal_to_float(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [decimal_to_float(item) for item in obj]
+                elif isinstance(obj, Decimal):
+                    return float(obj)
+                return obj
+
+            scenarios_json = decimal_to_float(pricing_result.alternative_scenarios)
+
+            db_result = JobPricingResult(
+                request_id=request.id,
+                currency='SGD',
+                period='annual',
+                recommended_min=pricing_result.recommended_min,
+                recommended_max=pricing_result.recommended_max,
+                target_salary=pricing_result.target_salary,
+                p10=pricing_result.p10,
+                p25=pricing_result.p25,
+                p50=pricing_result.p50,
+                p75=pricing_result.p75,
+                p90=pricing_result.p90,
+                confidence_score=pricing_result.confidence_score,
+                confidence_level=confidence_level,
+                summary_text=pricing_result.explanation,
+                alternative_scenarios=scenarios_json,
+                total_data_points=sum(c.sample_size for c in pricing_result.source_contributions),
+                data_sources_used=len(pricing_result.source_contributions),
+                data_consistency_score=pricing_result.confidence_score,  # Use confidence as proxy
+            )
+
+            # Add to session and flush to get ID for contributions
+            self.session.add(db_result)
+            self.session.flush()
+
+            # Step 4: Save data source contributions for audit trail
+            for contrib in pricing_result.source_contributions:
+                recency_days = contrib.recency_days if contrib.recency_days is not None else 180
+                recency_weight = max(0.0, 1.0 - (recency_days / 365))
+
+                db_contrib = DBContribution(
+                    result_id=db_result.id,
+                    source_name=contrib.source_name,
+                    weight_applied=contrib.weight,
+                    sample_size=contrib.sample_size,
+                    quality_score=contrib.match_quality,
+                    recency_weight=recency_weight,
+                    p10=contrib.p10,
+                    p25=contrib.p25,
+                    p50=contrib.p50,
+                    p75=contrib.p75,
+                    p90=contrib.p90,
+                )
+                self.session.add(db_contrib)
+
+            logger.info(f"    Target salary: SGD {db_result.target_salary:,.2f}")
+            logger.info(f"    Range: SGD {db_result.recommended_min:,.2f} - {db_result.recommended_max:,.2f}")
+            logger.info(f"    Confidence: {db_result.confidence_level} ({db_result.confidence_score:.0f}%)")
+            logger.info(f"    Data sources: {len(pricing_result.source_contributions)}")
+
+            return db_result
+
+        except NoMarketDataError as e:
+            # Specific handling for no market data available
+            logger.warning(f"    No market data available for '{request.job_title}': {e}")
+            return None
 
         except Exception as e:
             logger.error(f"    Error calculating pricing: {e}", exc_info=True)

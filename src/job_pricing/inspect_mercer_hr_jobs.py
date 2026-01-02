@@ -1,10 +1,19 @@
-"""Inspect what HR jobs exist in Mercer library."""
+"""
+Inspect what HR jobs exist in Mercer library.
+
+USAGE: Requires DATABASE_URL environment variable to be set.
+Example: DATABASE_URL=postgresql://user:pass@host:5432/db python inspect_mercer_hr_jobs.py
+"""
 import sys
 import os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-os.environ['DATABASE_URL'] = 'postgresql://job_pricing_user:change_this_secure_password_123@localhost:5432/job_pricing_db'
+# PRODUCTION: No hardcoded credentials - require environment variable
+if not os.getenv('DATABASE_URL'):
+    print("ERROR: DATABASE_URL environment variable is required")
+    print("Example: DATABASE_URL=postgresql://user:pass@host:5432/db python inspect_mercer_hr_jobs.py")
+    sys.exit(1)
 
 from job_pricing.core.database import get_session
 from job_pricing.models import MercerJobLibrary, MercerMarketData

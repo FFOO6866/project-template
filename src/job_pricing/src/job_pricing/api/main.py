@@ -16,6 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from job_pricing.core.config import get_settings
+from job_pricing.exceptions import JobPricingException
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,29 @@ app = FastAPI(
 # Register rate limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# Global exception handler for JobPricingException hierarchy
+@app.exception_handler(JobPricingException)
+async def job_pricing_exception_handler(request: Request, exc: JobPricingException):
+    """
+    Handle all JobPricingException subclasses with proper HTTP status codes.
+
+    Each exception class defines its own http_status_code and error_code,
+    ensuring consistent API responses across all endpoints.
+    """
+    logger.warning(
+        f"JobPricingException: {exc.error_code} - {exc.message}",
+        extra={
+            "error_code": exc.error_code,
+            "http_status": exc.http_status_code,
+            "path": request.url.path,
+        }
+    )
+    return JSONResponse(
+        status_code=exc.http_status_code,
+        content=exc.to_dict()
+    )
 
 # --------------------------------------------------------------------------
 # Middleware

@@ -18,6 +18,7 @@ import re
 from sqlalchemy.orm import Session
 from job_pricing.models import ScrapedJobListing
 from job_pricing.core.database import SessionLocal
+from job_pricing.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,10 @@ class MyCareersFutureScraper:
     """MCF scraper using requests (Selenium-free for speed)."""
 
     BASE_URL = "https://api.mycareersfuture.gov.sg/v2/jobs"
+
+    def __init__(self):
+        """Initialize scraper with configuration settings."""
+        self.settings = get_settings()
 
     def scrape_jobs(
         self,
@@ -69,9 +74,9 @@ class MyCareersFutureScraper:
                     self.BASE_URL,
                     params=params,
                     headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                        "User-Agent": self.settings.SCRAPER_USER_AGENT
                     },
-                    timeout=15
+                    timeout=self.settings.SCRAPER_REQUEST_TIMEOUT
                 )
 
                 if response.status_code != 200:
